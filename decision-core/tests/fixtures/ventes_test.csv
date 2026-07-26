@@ -1,0 +1,11 @@
+Date,Produit,Ville,Prix,Promotion,Stock,Ventes
+01/01,Ordinateur,Paris,850,Oui,120,38
+02/01,Ordinateur,Paris,850,Oui,118,42
+03/01,Ordinateur,Lyon,870,Non,95,25
+04/01,Écran,Paris,300,Non,200,55
+05/01,Écran,Lyon,310,Oui,180,60
+06/01,Clavier,Paris,45,Non,500,120
+07/01,Clavier,Lyon,45,Oui,480,135
+08/01,Ordinateur,Paris,850,Non,110,30
+09/01,Écran,Paris,300,Oui,190,58
+10/01,Clavier,Lyon,45,Non,470,110
