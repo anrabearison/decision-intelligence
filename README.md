@@ -18,7 +18,7 @@ Trois objectifs guident ce projet, avec des critères de succès différents :
 - **Phase 1a — Decision Core Foundation** : import, validation, profiling, statistiques, simulation simple, rapport. *Jalon : Go/No-Go technique.* **✅ Complète, 63 tests.**
 - **Phase 1a.5 — Validation légère** : le rapport est montré à 5-10 personnes cibles avant d'aller plus loin. *Jalon : désirabilité confirmée ou non.*
 - **Phase 1b — Decision Core Analytics** : Monte Carlo, corrélations, incertitude, distributions, sensibilité. *Jalon : API stable v1.0.*
-- **Phase 2 — Decision Studio** : interface React + façade FastAPI. **🚧 decision-engine initialisé, 11 tests.**
+- **Phase 2 — Decision Studio** : interface React + façade FastAPI. **✅ Frontend fonctionnel (upload, scan, rapport, simulation), decision-engine 11 tests.**
 - **Phase 3 — Decision Intelligence** : prédiction, risque, recommandation.
 - **Phase 4 — AI Layer** : explications en langage naturel, chat, RAG.
 - **Phase 4.5 — Market Validation** : tests utilisateurs approfondis, cas d'usage, feedback.
