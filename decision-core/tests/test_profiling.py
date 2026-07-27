@@ -72,3 +72,28 @@ class TestCorrelationMatrixOnlyNumeric:
         corr = correlation_matrix(df)
         assert "Produit" not in corr.columns
         assert "Ville" not in corr.columns
+
+
+class TestCorrelationMatrixExcludesIdentifiers:
+    def test_correlation_ignores_identifier_columns(self):
+        # Numero_lot est une séquence 1..n : numérique mais un identifiant,
+        # jamais une variable explicative légitime dans une corrélation.
+        # Temperature/Taux_defaut ont des valeurs répétées (contrairement à
+        # Numero_lot) pour ne pas être elles-mêmes détectées comme identifiant.
+        df = pd.DataFrame({
+            "Numero_lot": range(1, 31),
+            "Temperature": [70, 71, 70, 72, 71, 70, 73, 71, 70, 72] * 3,
+            "Taux_defaut": [0.5, 0.6, 0.5, 0.7, 0.6, 0.5, 0.8, 0.6, 0.5, 0.7] * 3,
+        })
+        corr = correlation_matrix(df)
+        assert "Numero_lot" not in corr.columns
+
+    def test_correlation_keeps_legitimate_discrete_numeric_columns(self):
+        # Un compteur/quantité discret légitime (pas un identifiant) doit
+        # rester dans la matrice - seule l'identification stricte doit exclure.
+        df = pd.DataFrame({
+            "Quantite": [1, 2, 1, 3, 2, 1, 4, 2, 1, 3] * 3,
+            "Prix": [10, 20, 10, 30, 20, 10, 40, 20, 10, 30] * 3,
+        })
+        corr = correlation_matrix(df)
+        assert "Quantite" in corr.columns

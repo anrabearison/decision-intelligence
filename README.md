@@ -48,6 +48,7 @@ Volontaires, pas des oublis — chacune correspond à une fonctionnalité repous
 - **Aucune règle métier intégrée.**
 - **Corrélation ≠ causalité** : rappelé explicitement dans chaque rapport.
 - **Priorité aux relations non triviales** : le moteur évite de présenter comme "insight principal" une corrélation dont le sens est déjà évident avant analyse.
+- **Identifiants exclus des corrélations** : une colonne numérique séquentielle (ex: numéro de lot, ID) est détectée via sa quasi-corrélation parfaite avec l'ordre des lignes et exclue de `correlation_matrix` — bug réel trouvé en testant le moteur sur un dataset de contrôle qualité, corrigé avec un test de non-régression (cf. `test_profiling.py::TestCorrelationMatrixExcludesIdentifiers`). Cause racine : `detect_column_type` classe toute colonne numérique avant de vérifier si elle ressemble à un identifiant, donc un identifiant numérique n'est jamais détecté par cette voie seule.
 
 ## Choix du modèle statistique (Phase 1a)
 
