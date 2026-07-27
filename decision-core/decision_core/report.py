@@ -8,6 +8,7 @@ Règle de conception (voir README) : ne jamais présenter comme
 chaque corrélation forte affichée rappelle explicitement que
 corrélation n'est pas causalité.
 """
+import html
 import itertools
 import pandas as pd
 
@@ -145,10 +146,17 @@ def render_text_summary(report: dict) -> str:
 
 def render_html(report: dict) -> str:
     ds = report["dataset_summary"]
-    text_summary = render_text_summary(report).replace("\n", "<br>")
+    # Échappement systématique de toute donnée dérivée du fichier importé
+    # (noms de colonnes notamment) - ces valeurs viennent d'un upload
+    # utilisateur non fiable et ne doivent jamais être injectées telles
+    # quelles dans du HTML (risque XSS, cf. commit). Le JSON retourné par
+    # l'API n'est lui jamais échappé : c'est React qui échappe déjà côté
+    # frontend, échapper ici aussi produirait un double échappement.
+    text_summary = html.escape(render_text_summary(report)).replace("\n", "<br>")
 
     correlations_rows = "".join(
-        f"<tr><td>{c['column_a']}</td><td>{c['column_b']}</td>"
+        f"<tr><td>{html.escape(str(c['column_a']))}</td>"
+        f"<td>{html.escape(str(c['column_b']))}</td>"
         f"<td>{c['value']:.3f}</td></tr>"
         for c in report["top_correlations"]
     )

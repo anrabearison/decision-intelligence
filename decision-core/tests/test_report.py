@@ -157,3 +157,16 @@ class TestRenderHtml:
         report = generate_report(df)
         html = render_html(report)
         assert "10" in html
+
+    def test_html_escapes_column_names_to_prevent_injection(self):
+        # Un nom de colonne vient de données non fiables (en-tête CSV
+        # uploadé par l'utilisateur) - ne doit jamais être injecté tel
+        # quel dans le HTML produit (risque XSS).
+        df = pd.DataFrame({
+            "<script>alert(1)</script>": [1, 2, 3, 4, 5] * 8,
+            "B": [5, 4, 3, 2, 1] * 8,
+        })
+        report = generate_report(df)
+        html = render_html(report)
+        assert "<script>alert(1)</script>" not in html
+        assert "&lt;script&gt;" in html
