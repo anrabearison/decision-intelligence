@@ -19,6 +19,9 @@ from decision_core.simulation import simulate_scenario
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
 
 
+LOW_R_SQUARED_THRESHOLD = 0.3
+
+
 def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> dict:
     warnings = []
     n_rows = len(df)
@@ -51,12 +54,21 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
     }
 
     if simulation_config is not None:
-        report["simulation"] = simulate_scenario(
+        simulation = simulate_scenario(
             df,
             target=simulation_config["target"],
             feature=simulation_config["feature"],
             change_pct=simulation_config["change_pct"],
         )
+        report["simulation"] = simulation
+        if simulation["model_r_squared"] < LOW_R_SQUARED_THRESHOLD:
+            warnings.append(
+                f"R² faible ({simulation['model_r_squared']:.2f}) pour la "
+                f"simulation sur '{simulation['feature']}' : le modèle "
+                f"explique moins de {int(LOW_R_SQUARED_THRESHOLD*100)}% de "
+                f"la variance de '{simulation['target']}' - la projection "
+                f"est peu fiable, à interpréter avec beaucoup de prudence."
+            )
 
     return report
 
@@ -95,11 +107,20 @@ def render_text_summary(report: dict) -> str:
 
     if "simulation" in report:
         sim = report["simulation"]
-        lines.append(
-            f"💡 Simulation sur '{sim['feature']}' : "
-            f"{sim['baseline']:.1f} → {sim['simulated']:.1f} "
-            f"({sim['change_pct']:+.1f}%)."
-        )
+        if sim.get("change_pct_reliable", True):
+            lines.append(
+                f"💡 Simulation sur '{sim['feature']}' : "
+                f"{sim['baseline']:.1f} → {sim['simulated']:.1f} "
+                f"({sim['change_pct']:+.1f}%)."
+            )
+        else:
+            lines.append(
+                f"💡 Simulation sur '{sim['feature']}' : "
+                f"{sim['baseline']:.2f} → {sim['simulated']:.2f}. "
+                f"Variation en % non fiable ici (valeur de référence trop "
+                f"proche de zéro) - se fier aux valeurs absolues plutôt "
+                f"qu'au pourcentage."
+            )
 
     for w in report["warnings"]:
         lines.append(f"⚠️ {w}")

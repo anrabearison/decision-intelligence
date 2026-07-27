@@ -6,7 +6,11 @@ avant l'écriture du moteur (TDD).
 import os
 import pandas as pd
 import pytest
-from decision_core.regression import fit_simple_regression, fit_multivariate_regression
+from decision_core.regression import (
+    fit_simple_regression,
+    fit_multivariate_regression,
+    InsufficientDataError,
+)
 from decision_core.simulation import simulate_scenario
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -68,8 +72,90 @@ class TestSimulateScenarioRetail:
         assert result["change_pct"] == pytest.approx(expected_change_pct, abs=0.01)
 
 
+class TestSimulateScenarioNearZeroBaseline:
+    def test_change_pct_unreliable_when_baseline_near_zero(self):
+        # cible dont la moyenne est quasi nulle relativement à sa dispersion
+        # (mean=0.05, std≈4.85) : un pourcentage de variation serait trompeur.
+        df = pd.DataFrame({
+            "X": list(range(1, 21)),
+            "Y": [9.45, 2.68, 0.98, -8.82, -0.88, -1.27, 0.09, -2.63, 0.28, -1.88,
+                  -6.07, 4.93, 4.91, 9.05, 0.75, -1.52, -2.22, -7.23, 5.41, -5.0],
+        })
+        result = simulate_scenario(df, target="Y", feature="X", change_pct=0.1)
+        assert result["change_pct_reliable"] is False
+        assert result["change_pct"] is None
+
+    def test_change_pct_reliable_when_baseline_not_near_zero(self):
+        df = load("ventes_test.csv")
+        result = simulate_scenario(df, target="Ventes", feature="Prix", change_pct=0.05)
+        assert result["change_pct_reliable"] is True
+        assert result["change_pct"] is not None
+
+
+class TestSimulateScenarioPropagatesInsufficientData:
+    def test_raises_on_constant_feature(self):
+        df = pd.DataFrame({"X": [10.0] * 20, "Y": list(range(20))})
+        with pytest.raises(InsufficientDataError):
+            simulate_scenario(df, target="Y", feature="X", change_pct=0.1)
+
+    def test_raises_on_single_row(self):
+        df = pd.DataFrame({"X": [10], "Y": [20]})
+        with pytest.raises(InsufficientDataError):
+            simulate_scenario(df, target="Y", feature="X", change_pct=0.1)
+
+
 class TestRegressionRejectsNonNumericFeature:
     def test_raises_on_categorical_feature(self):
         df = load("ventes_test.csv")
         with pytest.raises(TypeError):
             fit_simple_regression(df, target="Ventes", feature="Produit")
+
+
+class TestRegressionHandlesMissingValues:
+    def test_simple_regression_drops_nan_rows_and_computes_correctly(self):
+        df = pd.DataFrame({
+            "X": [1, 2, 3, 4, 5, None, 7, 8],
+            "Y": [2, 4, 6, 8, 10, 12, None, 16],
+        })
+        # lignes valides restantes (X et Y non-nan simultanément) : (1,2)(2,4)(3,6)(4,8)(5,10)(8,16)
+        model = fit_simple_regression(df, target="Y", feature="X")
+        assert model["slope"] == pytest.approx(2.0, abs=0.01)
+        assert not (model["slope"] != model["slope"])  # pas NaN
+
+    def test_multivariate_regression_drops_nan_rows(self):
+        df = pd.DataFrame({
+            "A": [1, 2, 3, 4, None, 6, 7, 8, 9, 10],
+            "B": [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
+            "Y": [10, 12, 14, 16, 18, None, 22, 24, 26, 28],
+        })
+        model = fit_multivariate_regression(df, target="Y", features=["A", "B"])
+        assert model["r_squared"] == model["r_squared"]  # pas NaN
+
+    def test_raises_insufficient_data_error_when_too_few_rows_after_dropna(self):
+        df = pd.DataFrame({"X": [1, None, None, None], "Y": [2, None, None, 8]})
+        with pytest.raises(InsufficientDataError):
+            fit_simple_regression(df, target="Y", feature="X")
+
+
+class TestRegressionHandlesZeroVariance:
+    def test_raises_insufficient_data_error_on_constant_feature(self):
+        df = pd.DataFrame({"X": [10.0] * 20, "Y": [1, 2, 3, 4, 5] * 4})
+        with pytest.raises(InsufficientDataError):
+            fit_simple_regression(df, target="Y", feature="X")
+
+    def test_raises_insufficient_data_error_on_constant_target(self):
+        df = pd.DataFrame({"X": [1, 2, 3, 4, 5] * 4, "Y": [7.0] * 20})
+        with pytest.raises(InsufficientDataError):
+            fit_simple_regression(df, target="Y", feature="X")
+
+
+class TestRegressionHandlesTooFewRows:
+    def test_raises_insufficient_data_error_on_single_row(self):
+        df = pd.DataFrame({"X": [10], "Y": [20]})
+        with pytest.raises(InsufficientDataError):
+            fit_simple_regression(df, target="Y", feature="X")
+
+    def test_raises_insufficient_data_error_below_min_rows_multivariate(self):
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "Y": [5, 6]})
+        with pytest.raises(InsufficientDataError):
+            fit_multivariate_regression(df, target="Y", features=["A", "B"])

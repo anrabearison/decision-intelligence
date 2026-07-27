@@ -87,6 +87,17 @@ class TestReportWithSimulation:
         report = generate_report(df)
         assert "simulation" not in report
 
+    def test_warns_when_simulation_r_squared_is_low(self):
+        df = pd.DataFrame({
+            "X": list(range(1, 41)),
+            "Y": [50, 51, 49, 52, 48, 50, 51, 49, 53, 47,
+                  50, 52, 48, 51, 49, 50, 53, 47, 51, 49,
+                  50, 51, 49, 52, 48, 50, 51, 49, 53, 47,
+                  50, 52, 48, 51, 49, 50, 53, 47, 51, 49],
+        })
+        report = generate_report(df, simulation_config={"target": "Y", "feature": "X", "change_pct": 0.1})
+        assert any("r²" in w.lower() or "r2" in w.lower() for w in report["warnings"])
+
 
 class TestRenderTextSummary:
     def test_text_summary_is_string(self):
@@ -107,6 +118,16 @@ class TestRenderTextSummary:
         report = generate_report(df)
         text = render_text_summary(report)
         assert "causalité" in text.lower()
+
+    def test_text_summary_does_not_crash_when_change_pct_unreliable(self):
+        df = pd.DataFrame({
+            "X": list(range(1, 21)),
+            "Y": [9.45, 2.68, 0.98, -8.82, -0.88, -1.27, 0.09, -2.63, 0.28, -1.88,
+                  -6.07, 4.93, 4.91, 9.05, 0.75, -1.52, -2.22, -7.23, 5.41, -5.0],
+        })
+        report = generate_report(df, simulation_config={"target": "Y", "feature": "X", "change_pct": 0.1})
+        text = render_text_summary(report)  # ne doit pas lever d'exception
+        assert "non fiable" in text.lower() or "peu fiable" in text.lower()
 
 
 class TestRenderHtml:

@@ -3,10 +3,56 @@ Module de régression - Phase 1a.
 Choix assumé : régression linéaire uniquement (simple ou multivariée),
 sélection automatique fixe, pas de choix utilisateur de modèle
 (voir README, section "Choix du modèle statistique").
+
+Robustesse (voir README, section limites) : les valeurs manquantes,
+colonnes à variance nulle et échantillons trop petits sont détectés
+explicitement avant tout calcul, via _validate_regression_inputs -
+jamais laissés fuiter en NaN silencieux ou en exception brute de scipy/numpy.
 """
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+MIN_ROWS_FOR_REGRESSION = 3
+
+
+class InsufficientDataError(ValueError):
+    """Levée quand une régression ne peut pas être calculée de façon fiable
+    (trop peu de lignes après nettoyage des NaN, ou variance nulle sur une
+    variable). Une régression sur si peu ou si peu variées de données
+    produirait un résultat dégénéré (NaN ou division par zéro) plutôt
+    qu'une exception claire - on préfère échouer explicitement."""
+    pass
+
+
+def _validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    """Vérifie et nettoie les colonnes utilisées par une régression.
+
+    - Retire uniquement les lignes avec NaN sur les colonnes concernées
+      (pas sur tout le DataFrame, pour ne pas perdre de données inutilement).
+    - Vérifie qu'il reste assez de lignes après nettoyage.
+    - Vérifie qu'aucune colonne n'a une variance nulle (une variable
+      constante ne peut pas participer à une régression linéaire).
+
+    Retourne le sous-DataFrame nettoyé (colonnes demandées uniquement).
+    """
+    subset = df[columns].dropna()
+
+    if len(subset) < MIN_ROWS_FOR_REGRESSION:
+        raise InsufficientDataError(
+            f"Pas assez de données pour une régression fiable : "
+            f"{len(subset)} ligne(s) valide(s) après retrait des valeurs "
+            f"manquantes (minimum requis : {MIN_ROWS_FOR_REGRESSION})."
+        )
+
+    for col in columns:
+        if subset[col].std() == 0:
+            raise InsufficientDataError(
+                f"La colonne '{col}' a une variance nulle (valeur "
+                f"constante) : une régression ne peut pas être calculée."
+            )
+
+    return subset
 
 
 def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> dict:
@@ -15,8 +61,10 @@ def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> dict:
     if not pd.api.types.is_numeric_dtype(df[target]):
         raise TypeError(f"La colonne '{target}' doit être numérique pour une régression.")
 
-    x = df[feature].values
-    y = df[target].values
+    clean = _validate_regression_inputs(df, [feature, target])
+
+    x = clean[feature].values
+    y = clean[target].values
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
 
     return {
@@ -33,9 +81,11 @@ def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -
         if not pd.api.types.is_numeric_dtype(df[f]):
             raise TypeError(f"La colonne '{f}' doit être numérique pour une régression.")
 
-    X = df[features].values
+    clean = _validate_regression_inputs(df, features + [target])
+
+    X = clean[features].values
     X_with_intercept = np.column_stack([np.ones(len(X)), X])
-    y = df[target].values
+    y = clean[target].values
 
     coefs, residuals, rank, sv = np.linalg.lstsq(X_with_intercept, y, rcond=None)
     intercept = float(coefs[0])
