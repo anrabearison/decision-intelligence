@@ -6,6 +6,7 @@ Le rapport ne doit jamais présenter comme "insight principal" une
 corrélation triviale (cf. remarque utilisateur / README).
 """
 import os
+import numpy as np
 import pandas as pd
 import pytest
 from decision_core.report import generate_report, render_text_summary, render_html
@@ -97,6 +98,19 @@ class TestReportWithSimulation:
         })
         report = generate_report(df, simulation_config={"target": "Y", "feature": "X", "change_pct": 0.1})
         assert any("r²" in w.lower() or "r2" in w.lower() for w in report["warnings"])
+
+    def test_warns_when_simulation_relies_on_influential_point(self):
+        # point individuellement plausible mais bivariablement incohérent -
+        # cf. test_influence_detection.py, IQR seul ne le détecte pas.
+        np.random.seed(11)
+        n = 29
+        X = np.random.uniform(10, 30, n)
+        Y = 2 * X + np.random.normal(0, 3, n)
+        X = np.append(X, 15)
+        Y = np.append(Y, 55)
+        df = pd.DataFrame({"X": X, "Y": Y})
+        report = generate_report(df, simulation_config={"target": "Y", "feature": "X", "change_pct": 0.1})
+        assert any("influent" in w.lower() for w in report["warnings"])
 
 
 class TestRenderTextSummary:

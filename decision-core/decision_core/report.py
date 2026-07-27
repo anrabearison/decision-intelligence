@@ -15,6 +15,7 @@ from decision_core.validation import validate_dataset
 from decision_core.profiling import descriptive_stats, correlation_matrix
 from decision_core.anomaly_detection import detect_anomalies_iqr, MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.simulation import simulate_scenario
+from decision_core.influence_detection import detect_influential_points
 
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
 
@@ -68,6 +69,20 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
                 f"explique moins de {int(LOW_R_SQUARED_THRESHOLD*100)}% de "
                 f"la variance de '{simulation['target']}' - la projection "
                 f"est peu fiable, à interpréter avec beaucoup de prudence."
+            )
+
+        influence = detect_influential_points(
+            df, feature=simulation_config["feature"], target=simulation_config["target"]
+        )
+        if influence["indices"]:
+            warnings.append(
+                f"Point(s) influent(s) détecté(s) (ligne(s) "
+                f"{influence['indices']}) : ce résultat dépend fortement "
+                f"d'un ou plusieurs points spécifiques - une corrélation "
+                f"ou une régression peut être largement déformée par un "
+                f"seul point atypique, même s'il n'est pas détecté comme "
+                f"anomalie sur une seule colonne. Vérifier ces valeurs "
+                f"avant de s'y fier."
             )
 
     return report
