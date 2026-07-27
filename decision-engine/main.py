@@ -19,12 +19,31 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from decision_core.importer import UnsupportedFileFormatError, import_file
+from decision_core.regression import InsufficientDataError
 from decision_core.report import generate_report
 
 MAX_FILE_SIZE_MB = 50
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
+# Toute exception "métier" connue de decision-core doit être ajoutée ici :
+# c'est le seul endroit à mettre à jour pour qu'une nouvelle exception
+# typée soit automatiquement renvoyée en 400 propre plutôt qu'en 500 brut
+# avec stack trace exposée (cf. ARCHITECTURE.md, règle explicite).
+DOMAIN_ERRORS = (UnsupportedFileFormatError, InsufficientDataError)
+
 app = FastAPI(title="decision-engine", version="0.1.0")
+
+
+async def handle_domain_error(request: Request, exc: Exception):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+# FastAPI n'accepte pas un tuple dans exception_handler : on enregistre
+# le même handler pour chaque type individuellement, tout en gardant
+# DOMAIN_ERRORS comme unique liste à mettre à jour pour une nouvelle
+# exception métier (cf. ARCHITECTURE.md).
+for _error_type in DOMAIN_ERRORS:
+    app.add_exception_handler(_error_type, handle_domain_error)
 
 
 @app.middleware("http")
@@ -63,8 +82,6 @@ async def analyze(
 
     try:
         df = import_file(tmp_path)
-    except UnsupportedFileFormatError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     finally:
         os.remove(tmp_path)
 

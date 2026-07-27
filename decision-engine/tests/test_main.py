@@ -87,3 +87,28 @@ class TestAnalyzeWithSimulation:
         body = response.json()
         assert "simulation" in body
         assert body["simulation"]["feature"] == "Prix"
+
+
+class TestAnalyzeReturnsCleanErrorsForDomainExceptions:
+    def test_insufficient_data_error_returns_400_not_500(self):
+        # Colonne à variance nulle : decision-core lève InsufficientDataError,
+        # ne doit jamais fuiter en 500 brut avec stack trace (cf. commit).
+        content = b"X,Y\n1,10\n1,20\n1,30\n1,40\n"
+        response = client.post(
+            "/engine/analyze",
+            files={"file": ("t.csv", io.BytesIO(content), "text/csv")},
+            data={"target": "Y", "feature": "X", "change_pct": "0.1"},
+        )
+        assert response.status_code == 400
+        assert "detail" in response.json()
+
+    def test_error_detail_does_not_leak_stack_trace(self):
+        content = b"X,Y\n1,10\n1,20\n1,30\n1,40\n"
+        response = client.post(
+            "/engine/analyze",
+            files={"file": ("t.csv", io.BytesIO(content), "text/csv")},
+            data={"target": "Y", "feature": "X", "change_pct": "0.1"},
+        )
+        detail = response.json()["detail"]
+        assert "Traceback" not in detail
+        assert "File \"" not in detail
