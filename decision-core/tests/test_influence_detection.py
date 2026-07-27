@@ -89,3 +89,36 @@ class TestResultStructure:
         result = detect_influential_points(df, feature="X", target="Y")
         assert result["threshold"] == pytest.approx(4 / 30, abs=0.001)
         assert result["n"] == 30
+
+
+class TestHandlesMissingValuesConsistentlyWithRegression:
+    def test_does_not_return_nan_when_nan_values_present(self):
+        # Doit hériter du même garde-fou que fit_simple_regression
+        # (dropna local), pas un NaN silencieux comme avant le fix.
+        # Bruit ajouté pour éviter un ajustement parfait accidentel
+        # (cf. TestHandlesPerfectFit pour ce cas limite séparé).
+        df = pd.DataFrame({
+            "X": [1, 2, 3, None, 5, 6, 7, 8, 9, 10],
+            "Y": [2.1, 3.9, 6.2, 8.0, None, 11.8, 14.3, 15.9, 18.2, 19.8],
+        })
+        result = detect_influential_points(df, feature="X", target="Y")
+        assert result["max_distance"] == result["max_distance"]  # pas NaN
+
+    def test_raises_insufficient_data_error_on_zero_variance(self):
+        from decision_core.regression import InsufficientDataError
+        df = pd.DataFrame({"X": [5.0] * 20, "Y": list(range(20))})
+        with pytest.raises(InsufficientDataError):
+            detect_influential_points(df, feature="X", target="Y")
+
+
+class TestHandlesPerfectFit:
+    def test_no_nan_when_relationship_is_perfectly_linear(self):
+        # Cas limite mathématique distinct : quand tous les résidus sont
+        # nuls (ajustement parfait), le MSE au dénominateur de la formule
+        # de Cook est nul -> division 0/0 sans garde-fou. Convention
+        # adoptée : distance nulle pour tous les points (aucun n'est plus
+        # "influent" qu'un autre quand le modèle explique tout parfaitement).
+        df = pd.DataFrame({"X": list(range(1, 11)), "Y": [2 * x for x in range(1, 11)]})
+        result = detect_influential_points(df, feature="X", target="Y")
+        assert result["max_distance"] == 0.0
+        assert result["indices"] == []
