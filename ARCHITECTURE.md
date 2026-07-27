@@ -46,6 +46,16 @@ validité de l'ancienne clé. La vraie protection reste l'isolation
 réseau (service jamais exposé publiquement) ; la clé est une couche
 de défense supplémentaire, pas la seule.
 
+### Règle : exceptions métier de decision-core
+
+Toute nouvelle exception typée levée par `decision-core` (ex.
+`InsufficientDataError`, `UnsupportedFileFormatError`) doit être
+ajoutée au tuple `DOMAIN_ERRORS` dans `decision-engine/main.py`.
+Sans cet ajout, l'exception fuite en 500 brut avec stack trace
+exposée au client plutôt qu'un 400 propre - un bug réel de ce type a
+été trouvé et corrigé (cf. historique Git), d'où cette règle
+explicite plutôt qu'implicite.
+
 ## Pourquoi le fichier ne transite jamais deux fois inutilement (Phase 2)
 
 En Phase 2, le navigateur envoie le fichier directement à
