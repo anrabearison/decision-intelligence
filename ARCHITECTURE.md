@@ -46,15 +46,20 @@ validité de l'ancienne clé. La vraie protection reste l'isolation
 réseau (service jamais exposé publiquement) ; la clé est une couche
 de défense supplémentaire, pas la seule.
 
-### Règle : exceptions métier de decision-core
+### Gestion d'erreur
 
-Toute nouvelle exception typée levée par `decision-core` (ex.
-`InsufficientDataError`, `UnsupportedFileFormatError`) doit être
-ajoutée au tuple `DOMAIN_ERRORS` dans `decision-engine/main.py`.
-Sans cet ajout, l'exception fuite en 500 brut avec stack trace
-exposée au client plutôt qu'un 400 propre - un bug réel de ce type a
-été trouvé et corrigé (cf. historique Git), d'où cette règle
-explicite plutôt qu'implicite.
+Un audit exhaustif (grep de tous les `raise` de `decision-core` +
+tests d'inputs réalistes) a montré que lister les exceptions typées
+une par une est structurellement insuffisant. Design retenu :
+`CLIENT_DATA_ERRORS = (ValueError, TypeError, KeyError,
+UnsupportedFileFormatError)` capture toute erreur imputable aux
+données du client (fichier vide/corrompu/malformé, colonne absente ou
+du mauvais type, échantillon insuffisant...) et retourne un 400 avec
+message clair. Un `exception_handler` générique sur `Exception`
+complète ce filet : tout bug vraiment imprévu reste un 500 générique
+(jamais de détails internes exposés), journalisé côté serveur pour le
+débogage - préserve la distinction utile entre erreur client et bug
+serveur.
 
 ## Pourquoi le fichier ne transite jamais deux fois inutilement (Phase 2)
 
