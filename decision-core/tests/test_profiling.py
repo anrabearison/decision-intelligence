@@ -4,11 +4,13 @@ Valeurs de référence calculées indépendamment (pandas en ligne de commande)
 et vérifiées avant d'écrire le moteur, conformément au TDD.
 """
 import os
+import numpy as np
 import pandas as pd
 import pytest
 from decision_core.profiling import (
     descriptive_stats,
     correlation_matrix,
+    correlation_pvalues,
 )
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -97,3 +99,40 @@ class TestCorrelationMatrixExcludesIdentifiers:
         })
         corr = correlation_matrix(df)
         assert "Quantite" in corr.columns
+
+
+class TestMultipleComparisonsCorrection:
+    def test_many_independent_columns_flags_few_or_no_significant_correlations(self):
+        # Cas empirique trouvé en audit expert : avec 15 colonnes
+        # indépendantes (aucune vraie relation) et n=30, la corrélation
+        # "la plus forte" dépasse 0.4 dans 97% des cas par pur hasard
+        # (problème des comparaisons multiples, jamais corrigé avant ce fix).
+        # Après correction Benjamini-Hochberg, la quasi-totalité ne doit
+        # plus être signalée comme significative.
+        rng = np.random.default_rng(0)
+        df = pd.DataFrame({f"V{i}": rng.normal(0, 1, 30) for i in range(15)})
+        pairs = correlation_pvalues(df)
+        n_significant = sum(1 for p in pairs if p["significant_after_correction"])
+        # Sur du bruit pur, le taux de fausses découvertes visé est 5% -
+        # tolérance large pour rester un test stable, pas un test de
+        # précision exacte sur un tirage aléatoire unique.
+        assert n_significant <= len(pairs) * 0.15
+
+    def test_true_strong_relationship_remains_significant_after_correction(self):
+        # La correction ne doit pas supprimer un vrai signal fort.
+        rng = np.random.default_rng(1)
+        x = rng.normal(0, 1, 40)
+        y = 3 * x + rng.normal(0, 0.3, 40)
+        df = pd.DataFrame({"X": x, "Y": y, "Bruit1": rng.normal(0, 1, 40), "Bruit2": rng.normal(0, 1, 40)})
+        pairs = correlation_pvalues(df)
+        xy_pair = next(p for p in pairs if {p["column_a"], p["column_b"]} == {"X", "Y"})
+        assert xy_pair["significant_after_correction"] is True
+
+    def test_returns_p_value_and_correction_fields(self):
+        rng = np.random.default_rng(2)
+        df = pd.DataFrame({"A": rng.normal(0, 1, 30), "B": rng.normal(0, 1, 30)})
+        pairs = correlation_pvalues(df)
+        assert len(pairs) == 1
+        assert "p_value" in pairs[0]
+        assert "significant_after_correction" in pairs[0]
+        assert "value" in pairs[0]

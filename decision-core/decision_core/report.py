@@ -13,7 +13,7 @@ import itertools
 import pandas as pd
 
 from decision_core.validation import validate_dataset
-from decision_core.profiling import descriptive_stats, correlation_matrix, legitimate_numeric_columns
+from decision_core.profiling import descriptive_stats, correlation_pvalues, legitimate_numeric_columns
 from decision_core.anomaly_detection import detect_anomalies_iqr, MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.simulation import simulate_scenario
 from decision_core.influence_detection import detect_influential_points
@@ -41,8 +41,21 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
     numeric_cols = legitimate_numeric_columns(df)
     profiling = {col: descriptive_stats(df[col]) for col in numeric_cols}
 
-    corr = correlation_matrix(df)
-    top_correlations = _extract_top_correlations(corr)
+    corr_pairs = correlation_pvalues(df)
+    top_correlations = _extract_top_correlations(corr_pairs)
+
+    n_tested = len(corr_pairs)
+    n_significant = sum(1 for p in corr_pairs if p.get("significant_after_correction"))
+    if n_tested >= 6 and n_significant < n_tested:
+        warnings.append(
+            f"Comparaisons multiples : sur {n_tested} paires de variables "
+            f"testées, seulement {n_significant} restent statistiquement "
+            f"significatives après correction (Benjamini-Hochberg, seuil "
+            f"5%). Plus il y a de colonnes, plus une corrélation isolée "
+            f"forte peut apparaître par hasard - se fier au champ "
+            f"'significant_after_correction' de chaque paire plutôt qu'à "
+            f"sa seule valeur."
+        )
 
     report = {
         "dataset_summary": {
@@ -109,21 +122,9 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
     return report
 
 
-def _extract_top_correlations(corr: pd.DataFrame, top_n: int = 5) -> list:
-    pairs = []
-    seen = set()
-    for col_a, col_b in itertools.combinations(corr.columns, 2):
-        pair_key = frozenset([col_a, col_b])
-        if pair_key in seen:
-            continue
-        seen.add(pair_key)
-        value = corr.loc[col_a, col_b]
-        if pd.isna(value):
-            continue
-        pairs.append({"column_a": col_a, "column_b": col_b, "value": float(value)})
-
-    pairs.sort(key=lambda p: abs(p["value"]), reverse=True)
-    return pairs[:top_n]
+def _extract_top_correlations(pairs: list, top_n: int = 5) -> list:
+    sorted_pairs = sorted(pairs, key=lambda p: abs(p["value"]), reverse=True)
+    return sorted_pairs[:top_n]
 
 
 def render_text_summary(report: dict) -> str:
