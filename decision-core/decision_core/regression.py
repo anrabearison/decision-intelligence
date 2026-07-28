@@ -15,6 +15,14 @@ from scipy import stats
 
 MIN_ROWS_FOR_REGRESSION = 3
 
+# Seuils usuels du nombre de conditionnement pour détecter la
+# multicolinéarité en régression (Belsley, Kuh & Welsch, 1980,
+# "Regression Diagnostics") : préoccupation modérée au-delà de 30,
+# sévère au-delà de 100. Choisi plutôt qu'un VIF par variable : sous-
+# produit quasi gratuit de ce qui est déjà calculé, et capture la
+# colinéarité agrégée entre 3+ variables, pas seulement paire à paire.
+CONDITION_NUMBER_WARNING_THRESHOLD = 30
+
 
 class InsufficientDataError(ValueError):
     """Levée quand une régression ne peut pas être calculée de façon fiable
@@ -96,9 +104,22 @@ def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     r_squared = 1 - ss_res / ss_tot
 
+    # Le nombre de conditionnement est sensible à l'échelle des variables,
+    # pas seulement à leur colinéarité réelle - deux features indépendantes
+    # mais d'échelles très différentes peuvent donner un conditionnement
+    # élevé sans aucune vraie colinéarité (trouvé en écrivant les tests :
+    # des features indépendantes donnaient ~1900, pas < 30 comme attendu).
+    # Standardisation (centrage-réduction) avant calcul pour isoler la
+    # vraie colinéarité des simples différences d'unités/échelles.
+    X_standardized = (X - X.mean(axis=0)) / X.std(axis=0)
+    X_standardized_with_intercept = np.column_stack([np.ones(len(X)), X_standardized])
+    condition_number = float(np.linalg.cond(X_standardized_with_intercept))
+
     return {
         "intercept": intercept,
         "coefficients": coefficients,
         "r_squared": float(r_squared),
         "target": target,
+        "condition_number": condition_number,
+        "multicollinearity_warning": condition_number > CONDITION_NUMBER_WARNING_THRESHOLD,
     }

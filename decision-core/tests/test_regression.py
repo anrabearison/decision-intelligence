@@ -4,6 +4,7 @@ Coefficients de référence calculés avec scipy.stats.linregress / numpy.linalg
 avant l'écriture du moteur (TDD).
 """
 import os
+import numpy as np
 import pandas as pd
 import pytest
 from decision_core.regression import (
@@ -50,6 +51,36 @@ class TestMultivariateRegressionTresorerie:
         assert model["intercept"] == pytest.approx(995.0, abs=0.5)
         assert model["coefficients"]["Nouveaux_clients"] == pytest.approx(594.09, abs=0.5)
         assert model["coefficients"]["Charges_variables"] == pytest.approx(-0.277, abs=0.01)
+
+
+class TestMultivariateRegressionDetectsMulticollinearity:
+    def test_warns_on_near_perfect_collinear_features(self):
+        # Cas empirique trouvé en audit expert : deux variables
+        # quasi-colinéaires (Charges_B ≈ 2.001 * Charges_A) produisent
+        # des coefficients numériquement valides mais statistiquement
+        # absurdes (signes/magnitudes instables) - condition number
+        # ~364000 dans le cas original, bien au-dessus du seuil usuel
+        # de préoccupation (30) et sévère (100) (Belsley/Kuh/Welsch 1980).
+        np.random.seed(1)
+        n = 40
+        charges_a = np.random.uniform(100, 1000, n)
+        charges_b = charges_a * 2.001 + np.random.normal(0, 0.01, n)
+        y = 50 + 0.01 * charges_a + np.random.normal(0, 5, n)
+        df = pd.DataFrame({"Charges_A": charges_a, "Charges_B": charges_b, "Y": y})
+        model = fit_multivariate_regression(df, target="Y", features=["Charges_A", "Charges_B"])
+        assert model["condition_number"] > 100
+        assert model["multicollinearity_warning"] is True
+
+    def test_no_warning_on_independent_features(self):
+        np.random.seed(2)
+        n = 40
+        a = np.random.uniform(100, 1000, n)
+        b = np.random.uniform(50, 500, n)  # indépendant de a
+        y = 50 + 0.01 * a + 0.02 * b + np.random.normal(0, 5, n)
+        df = pd.DataFrame({"A": a, "B": b, "Y": y})
+        model = fit_multivariate_regression(df, target="Y", features=["A", "B"])
+        assert model["condition_number"] < 30
+        assert model["multicollinearity_warning"] is False
 
 
 class TestSimulateScenarioRetail:
