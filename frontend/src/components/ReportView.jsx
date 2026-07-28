@@ -54,18 +54,28 @@ export default function ReportView({ report }) {
           <h3 className="report__block-title">Simulation — {simulation.feature}</h3>
           <div className="sim-result">
             <div className="sim-result__value">
-              <span className="mono">{simulation.baseline.toFixed(1)}</span>
+              <span className="mono">{simulation.baseline.toFixed(2)}</span>
               <span className="sim-result__label">actuel</span>
             </div>
             <span className="sim-result__sep">→</span>
             <div className="sim-result__value">
-              <span className="mono">{simulation.simulated.toFixed(1)}</span>
+              <span className="mono">{simulation.simulated.toFixed(2)}</span>
               <span className="sim-result__label">simulé</span>
             </div>
-            <span className={`sim-result__change mono ${simulation.change_pct >= 0 ? 'is-positive' : 'is-negative'}`}>
-              {simulation.change_pct >= 0 ? '+' : ''}{simulation.change_pct.toFixed(1)}%
-            </span>
+            {simulation.change_pct_reliable !== false && simulation.change_pct !== null ? (
+              <span className={`sim-result__change mono ${simulation.change_pct >= 0 ? 'is-positive' : 'is-negative'}`}>
+                {simulation.change_pct >= 0 ? '+' : ''}{simulation.change_pct.toFixed(1)}%
+              </span>
+            ) : (
+              <span className="sim-result__change mono is-unreliable">% non fiable</span>
+            )}
           </div>
+          {simulation.change_pct_reliable === false && (
+            <p className="report__disclaimer">
+              Variation en % non fiable ici (valeur de référence trop proche de zéro) —
+              se fier aux valeurs absolues ci-dessus.
+            </p>
+          )}
           <p className="report__disclaimer">
             R² = {simulation.model_r_squared.toFixed(2)} — régression linéaire, échantillon limité.
           </p>
