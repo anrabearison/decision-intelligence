@@ -34,6 +34,20 @@ class TestGenerateReportStructure:
         assert report["dataset_summary"]["n_rows"] == 10
         assert report["dataset_summary"]["n_columns"] == 7
 
+    def test_profiling_excludes_identifier_columns(self):
+        # Cohérence avec correlation_matrix (déjà corrigé) : une colonne
+        # identifiant (numéro de lot séquentiel) n'a pas de moyenne/écart-type
+        # statistiquement significatifs - trouvé en revue de code, le fix
+        # précédent n'avait été appliqué qu'à correlation_matrix, pas au
+        # profiling qui utilisait une liste de colonnes numériques séparée.
+        df = pd.DataFrame({
+            "Numero_lot": range(1, 31),
+            "Temperature": [70, 71, 70, 72, 71, 70, 73, 71, 70, 72] * 3,
+        })
+        report = generate_report(df)
+        assert "Numero_lot" not in report["profiling"]
+        assert "Temperature" in report["profiling"]
+
 
 class TestReportSmallSampleWarning:
     def test_warns_on_small_sample(self):

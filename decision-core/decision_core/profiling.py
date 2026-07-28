@@ -39,10 +39,19 @@ def _is_index_like(series: pd.Series) -> bool:
     return abs(corr) > INDEX_LIKE_CORRELATION_THRESHOLD
 
 
-def correlation_matrix(df: pd.DataFrame) -> pd.DataFrame:
+def legitimate_numeric_columns(df: pd.DataFrame) -> list:
+    """Colonnes numériques hors identifiants (ex: numéro de lot, ID
+    séquentiel) - à utiliser partout où des statistiques ou corrélations
+    sont calculées sur des colonnes numériques, pour rester cohérent
+    (cf. correlation_matrix et generate_report, qui utilisaient chacun
+    leur propre liste avant ce fix - trouvé en revue de code)."""
     numeric_df = df.select_dtypes(include="number")
-    legitimate_cols = [
+    return [
         col for col in numeric_df.columns
         if detect_column_type(df[col]) != "identifier" and not _is_index_like(df[col])
     ]
-    return numeric_df[legitimate_cols].corr()
+
+
+def correlation_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    legitimate_cols = legitimate_numeric_columns(df)
+    return df[legitimate_cols].corr()

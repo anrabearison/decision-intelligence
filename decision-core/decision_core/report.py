@@ -13,7 +13,7 @@ import itertools
 import pandas as pd
 
 from decision_core.validation import validate_dataset
-from decision_core.profiling import descriptive_stats, correlation_matrix
+from decision_core.profiling import descriptive_stats, correlation_matrix, legitimate_numeric_columns
 from decision_core.anomaly_detection import detect_anomalies_iqr, MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.simulation import simulate_scenario
 from decision_core.influence_detection import detect_influential_points
@@ -38,7 +38,7 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
 
     validation = validate_dataset(df)
 
-    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    numeric_cols = legitimate_numeric_columns(df)
     profiling = {col: descriptive_stats(df[col]) for col in numeric_cols}
 
     corr = correlation_matrix(df)
