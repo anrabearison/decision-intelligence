@@ -112,3 +112,65 @@ class TestAnalyzeReturnsCleanErrorsForDomainExceptions:
         detail = response.json()["detail"]
         assert "Traceback" not in detail
         assert "File \"" not in detail
+
+    def test_simulation_on_categorical_column_returns_400(self):
+        # Trouvé en audit : TypeError levée par fit_simple_regression,
+        # non catchée avant ce fix -> 500 brut.
+        content = b"Produit,Prix\nA,10\nB,20\nC,15\nA,12\nB,18\n"
+        response = client.post(
+            "/engine/analyze",
+            files={"file": ("t.csv", io.BytesIO(content), "text/csv")},
+            data={"target": "Prix", "feature": "Produit", "change_pct": "0.1"},
+        )
+        assert response.status_code == 400
+        assert "detail" in response.json()
+
+    def test_simulation_on_nonexistent_column_returns_400(self):
+        # Trouvé en audit : KeyError (faute de frappe utilisateur très
+        # probable via le champ texte libre du frontend) -> 500 sans
+        # aucun message avant ce fix.
+        content = b"A,B\n1,2\n3,4\n5,6\n7,8\n"
+        response = client.post(
+            "/engine/analyze",
+            files={"file": ("t.csv", io.BytesIO(content), "text/csv")},
+            data={"target": "ColonneInexistante", "feature": "A", "change_pct": "0.1"},
+        )
+        assert response.status_code == 400
+        assert "detail" in response.json()
+        assert response.json()["detail"] != ""
+
+    def test_empty_file_returns_400(self):
+        # Trouvé en audit : pandas.errors.EmptyDataError sur fichier de
+        # 0 octet (upload accidentel, cas réaliste).
+        response = client.post(
+            "/engine/analyze",
+            files={"file": ("vide.csv", io.BytesIO(b""), "text/csv")},
+        )
+        assert response.status_code == 400
+
+    def test_malformed_csv_returns_400(self):
+        # Trouvé en audit : pandas.errors.ParserError, probablement le
+        # cas le plus fréquent en usage réel (export mal formé).
+        content = b"A,B,C\n1,2,3\n4,5\n6,7,8,9,10\n"
+        response = client.post(
+            "/engine/analyze",
+            files={"file": ("malforme.csv", io.BytesIO(content), "text/csv")},
+        )
+        assert response.status_code == 400
+
+    def test_unexpected_error_still_returns_generic_500_without_leaking(self):
+        # Filet de sécurité générique : un bug vraiment imprévu ne doit
+        # jamais faire planter le serveur sans réponse, mais ne doit pas
+        # non plus être maquillé en erreur utilisateur (reste un 500,
+        # volontairement générique, pas de détails internes exposés).
+        from main import generic_error_handler
+        import asyncio
+
+        class FakeRequest:
+            pass
+
+        response = asyncio.run(generic_error_handler(FakeRequest(), RuntimeError("bug interne imprévu")))
+        assert response.status_code == 500
+        body = response.body.decode()
+        assert "bug interne imprévu" not in body
+        assert "Traceback" not in body

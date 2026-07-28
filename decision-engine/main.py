@@ -12,6 +12,7 @@ quand ce service devient interne, appelé uniquement par NestJS).
 En Phase 2 (pas de NestJS), la variable n'est pas définie : le service
 reste ouvert, appelé directement par le frontend.
 """
+import logging
 import os
 import tempfile
 
@@ -19,31 +20,54 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from decision_core.importer import UnsupportedFileFormatError, import_file
-from decision_core.regression import InsufficientDataError
 from decision_core.report import generate_report
+
+logger = logging.getLogger("decision-engine")
 
 MAX_FILE_SIZE_MB = 50
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 
-# Toute exception "métier" connue de decision-core doit être ajoutée ici :
-# c'est le seul endroit à mettre à jour pour qu'une nouvelle exception
-# typée soit automatiquement renvoyée en 400 propre plutôt qu'en 500 brut
-# avec stack trace exposée (cf. ARCHITECTURE.md, règle explicite).
-DOMAIN_ERRORS = (UnsupportedFileFormatError, InsufficientDataError)
+# Erreurs "données du client" : tout ce que decision-core peut lever pour
+# un problème imputable à l'input (fichier vide/corrompu, colonne absente,
+# colonne du mauvais type, échantillon insuffisant...). Un audit exhaustif
+# a montré que lister les exceptions typées une par une (InsufficientDataError,
+# UnsupportedFileFormatError...) est structurellement insuffisant : pandas
+# lève aussi EmptyDataError/ParserError (sous-classes de ValueError), et
+# une simulation sur une colonne inexistante ou catégorielle lève KeyError/
+# TypeError, jamais anticipés individuellement. D'où cette liste large de
+# classes de base plutôt qu'une liste d'exceptions spécifiques à maintenir
+# indéfiniment - complétée par un filet de sécurité générique ci-dessous
+# pour tout ce qui n'aurait pas été anticipé.
+CLIENT_DATA_ERRORS = (ValueError, TypeError, KeyError, UnsupportedFileFormatError)
+
+
+def _format_client_error(exc: Exception) -> str:
+    if isinstance(exc, KeyError):
+        # str(KeyError('X')) vaut "'X'" (guillemets superflus, peu clair) -
+        # reformulé pour rester compréhensible côté client.
+        return f"Colonne introuvable : {exc}. Vérifiez le nom de la colonne."
+    return str(exc)
+
 
 app = FastAPI(title="decision-engine", version="0.1.0")
 
 
-async def handle_domain_error(request: Request, exc: Exception):
-    return JSONResponse(status_code=400, content={"detail": str(exc)})
+async def handle_client_data_error(request: Request, exc: Exception):
+    return JSONResponse(status_code=400, content={"detail": _format_client_error(exc)})
 
 
-# FastAPI n'accepte pas un tuple dans exception_handler : on enregistre
-# le même handler pour chaque type individuellement, tout en gardant
-# DOMAIN_ERRORS comme unique liste à mettre à jour pour une nouvelle
-# exception métier (cf. ARCHITECTURE.md).
-for _error_type in DOMAIN_ERRORS:
-    app.add_exception_handler(_error_type, handle_domain_error)
+async def generic_error_handler(request: Request, exc: Exception):
+    # Filet de sécurité générique : tout ce qui n'est pas une erreur de
+    # données du client (donc probablement un bug imprévu côté serveur)
+    # reste un 500, volontairement générique - jamais de détails internes
+    # exposés au client, mais journalisé côté serveur pour le débogage.
+    logger.exception("Erreur non anticipée dans decision-engine")
+    return JSONResponse(status_code=500, content={"detail": "Une erreur interne est survenue."})
+
+
+for _error_type in CLIENT_DATA_ERRORS:
+    app.add_exception_handler(_error_type, handle_client_data_error)
+app.add_exception_handler(Exception, generic_error_handler)
 
 
 @app.middleware("http")
