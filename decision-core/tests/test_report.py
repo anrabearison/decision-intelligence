@@ -112,6 +112,25 @@ class TestReportWithSimulation:
         report = generate_report(df, simulation_config={"target": "Y", "feature": "X", "change_pct": 0.1})
         assert any("influent" in w.lower() for w in report["warnings"])
 
+    def test_warns_when_effective_simulation_sample_is_small_despite_large_dataset(self):
+        # Dataset global de 40 lignes (au-dessus du seuil "petit
+        # échantillon" global), mais seulement 5 valeurs valides sur les
+        # colonnes utilisées par la simulation après retrait des NaN -
+        # doit être signalé même si n_rows global ne l'est pas.
+        np.random.seed(1)
+        n = 40
+        df = pd.DataFrame({
+            "Autre_colonne": np.random.normal(50, 5, n),
+            "X": [1, 2, 3, 4, 5] + [None] * 35,
+            "Y": [10, 22, 28, 41, 48] + [None] * 35,
+        })
+        report = generate_report(df, simulation_config={"target": "Y", "feature": "X", "change_pct": 0.1})
+        assert report["dataset_summary"]["n_rows"] == 40  # dataset global bien à 40
+        assert any(
+            "5" in w and ("échantillon" in w.lower() or "valides" in w.lower())
+            for w in report["warnings"]
+        )
+
 
 class TestRenderTextSummary:
     def test_text_summary_is_string(self):

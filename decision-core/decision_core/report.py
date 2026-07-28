@@ -17,6 +17,7 @@ from decision_core.profiling import descriptive_stats, correlation_matrix
 from decision_core.anomaly_detection import detect_anomalies_iqr, MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.simulation import simulate_scenario
 from decision_core.influence_detection import detect_influential_points
+from decision_core.regression import _validate_regression_inputs
 
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
 
@@ -63,6 +64,25 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
             change_pct=simulation_config["change_pct"],
         )
         report["simulation"] = simulation
+
+        # L'avertissement "échantillon petit" plus haut porte sur la taille
+        # globale du dataset - insuffisant si les colonnes utilisées par
+        # CETTE simulation ont beaucoup de valeurs manquantes (un dataset
+        # de 40 lignes peut n'avoir que 5 valeurs valides sur X et Y).
+        effective_sample = _validate_regression_inputs(
+            df, [simulation_config["feature"], simulation_config["target"]]
+        )
+        effective_n = len(effective_sample)
+        if effective_n < n_rows and effective_n < SMALL_SAMPLE_THRESHOLD:
+            warnings.append(
+                f"Échantillon effectif réduit pour cette simulation : "
+                f"seulement {effective_n} lignes valides sur "
+                f"'{simulation_config['feature']}' et "
+                f"'{simulation_config['target']}' (sur {n_rows} au total), "
+                f"après retrait des valeurs manquantes - résultats "
+                f"indicatifs, pas robustes."
+            )
+
         if simulation["model_r_squared"] < LOW_R_SQUARED_THRESHOLD:
             warnings.append(
                 f"R² faible ({simulation['model_r_squared']:.2f}) pour la "
