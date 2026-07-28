@@ -136,3 +136,28 @@ class TestMultipleComparisonsCorrection:
         assert "p_value" in pairs[0]
         assert "significant_after_correction" in pairs[0]
         assert "value" in pairs[0]
+
+
+class TestCorrelationPvaluesPerformanceCap:
+    def test_caps_pairs_tested_above_column_limit(self):
+        # Trouvé en audit expert : croissance quadratique du nombre de
+        # paires (C(k,2)) - 200 colonnes = 19900 paires = ~34s, incompatible
+        # avec un traitement synchrone HTTP. Plafond : au-delà de
+        # MAX_COLUMNS_FOR_CORRELATION colonnes, seules les N premières
+        # (déterministe) sont utilisées pour les corrélations - le reste
+        # du rapport (profiling par colonne) reste peu coûteux et
+        # continue de couvrir toutes les colonnes.
+        rng = np.random.default_rng(0)
+        n_cols = 80
+        df = pd.DataFrame({f"V{i}": rng.normal(0, 1, 30) for i in range(n_cols)})
+        pairs = correlation_pvalues(df)
+        from decision_core.profiling import MAX_COLUMNS_FOR_CORRELATION
+        expected_pairs = MAX_COLUMNS_FOR_CORRELATION * (MAX_COLUMNS_FOR_CORRELATION - 1) // 2
+        assert len(pairs) == expected_pairs
+
+    def test_no_cap_below_threshold(self):
+        rng = np.random.default_rng(0)
+        n_cols = 10
+        df = pd.DataFrame({f"V{i}": rng.normal(0, 1, 30) for i in range(n_cols)})
+        pairs = correlation_pvalues(df)
+        assert len(pairs) == n_cols * (n_cols - 1) // 2

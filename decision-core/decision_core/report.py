@@ -13,7 +13,12 @@ import itertools
 import pandas as pd
 
 from decision_core.validation import validate_dataset
-from decision_core.profiling import descriptive_stats, correlation_pvalues, legitimate_numeric_columns
+from decision_core.profiling import (
+    descriptive_stats,
+    correlation_pvalues,
+    legitimate_numeric_columns,
+    MAX_COLUMNS_FOR_CORRELATION,
+)
 from decision_core.anomaly_detection import detect_anomalies_iqr, MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.simulation import simulate_scenario
 from decision_core.influence_detection import detect_influential_points
@@ -43,6 +48,16 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
 
     corr_pairs = correlation_pvalues(df)
     top_correlations = _extract_top_correlations(corr_pairs)
+
+    if len(numeric_cols) > MAX_COLUMNS_FOR_CORRELATION:
+        warnings.append(
+            f"Dataset large ({len(numeric_cols)} colonnes numériques) : "
+            f"les corrélations ne sont calculées que sur les "
+            f"{MAX_COLUMNS_FOR_CORRELATION} premières colonnes pour des "
+            f"raisons de performance. Les statistiques descriptives "
+            f"(moyenne, écart-type...) couvrent en revanche toutes les "
+            f"colonnes."
+        )
 
     n_tested = len(corr_pairs)
     n_significant = sum(1 for p in corr_pairs if p.get("significant_after_correction"))

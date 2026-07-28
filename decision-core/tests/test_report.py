@@ -145,6 +145,16 @@ class TestReportWithSimulation:
             for w in report["warnings"]
         )
 
+    def test_warns_when_correlation_columns_are_capped(self):
+        # Trouvé en audit de performance : au-delà de
+        # MAX_COLUMNS_FOR_CORRELATION colonnes, seules les N premières
+        # sont utilisées pour les corrélations - doit être signalé
+        # explicitement, pas silencieux.
+        rng = np.random.default_rng(0)
+        df = pd.DataFrame({f"V{i}": rng.normal(0, 1, 30) for i in range(80)})
+        report = generate_report(df)
+        assert any("50" in w and "colonnes" in w.lower() for w in report["warnings"])
+
 
 class TestRenderTextSummary:
     def test_text_summary_is_string(self):

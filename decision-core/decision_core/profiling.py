@@ -9,6 +9,15 @@ from decision_core.type_detection import detect_column_type
 
 FDR_SIGNIFICANCE_LEVEL = 0.05
 
+# Plafond de colonnes pour le calcul de corrélations : le nombre de
+# paires croît en C(k,2), quadratique. Trouvé en audit de performance :
+# 200 colonnes = 19900 paires = ~34s en synchrone, incompatible avec un
+# traitement HTTP synchrone (timeouts usuels ~30s sur Railway/Render).
+# Choix : plafonner plutôt que rejeter le fichier entier - le reste du
+# rapport (profiling par colonne) reste peu coûteux et continue de
+# couvrir toutes les colonnes, seul le calcul quadratique est limité.
+MAX_COLUMNS_FOR_CORRELATION = 50
+
 # Seuil au-delà duquel une colonne numérique quasi-parfaitement corrélée à
 # l'ordre des lignes est traitée comme un identifiant/index plutôt qu'une
 # vraie variable explicative (ex: numéro de lot, ID séquentiel).
@@ -74,6 +83,12 @@ def correlation_pvalues(df: pd.DataFrame) -> list:
     plus forte dépassait 0.4 dans 97% des tirages, purement par hasard
     (problème classique des comparaisons multiples)."""
     legitimate_cols = legitimate_numeric_columns(df)
+    if len(legitimate_cols) > MAX_COLUMNS_FOR_CORRELATION:
+        # Sélection déterministe (les N premières colonnes dans l'ordre
+        # du fichier) plutôt qu'aléatoire - reproductible entre deux
+        # analyses du même fichier.
+        legitimate_cols = legitimate_cols[:MAX_COLUMNS_FOR_CORRELATION]
+
     pairs = []
     for col_a, col_b in itertools.combinations(legitimate_cols, 2):
         subset = df[[col_a, col_b]].dropna()
