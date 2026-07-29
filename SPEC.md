@@ -216,7 +216,7 @@ React 18 + Vite, un seul écran (pas de routing).
 
 **Client API** centralisé (`src/api/client.js`) — un seul point de changement le jour où NestJS s'insère entre le frontend et `decision-engine`.
 
-**Gap connu** : aucune suite de tests automatisés. Un bug (`change_pct: null` non géré, crash `TypeError`) a atteint la production de code avant d'être détecté manuellement, précisément à cause de cette absence — noté explicitement comme dette technique.
+**Gap comblé** : infrastructure de test ajoutée (Vitest + Testing Library), 7 tests. Verrouillent 3 régressions déjà rencontrées en revue de code : `change_pct: null` non géré (crash `TypeError`), `significant_after_correction` (fix P1) jamais affiché à l'utilisateur, absence de validation de taille de fichier côté client malgré le texte "max 50 Mo" affiché. Comblait un gap documenté sur plusieurs commits précédents, qui avait permis à un bug d'atteindre la production malgré des tests backend au vert.
 
 ---
 
