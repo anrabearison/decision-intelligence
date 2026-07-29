@@ -3,7 +3,7 @@ decision-engine - façade FastAPI sur decision-core.
 
 Rôle strict : recevoir un fichier, appeler le moteur, retourner le
 résultat. Aucune notion d'utilisateur, d'organisation ou de
-persistance ici (cf. ARCHITECTURE.md) - c'est le rôle de NestJS
+persistance ici (cf. SPEC.md section 3) - c'est le rôle de NestJS
 à partir de la Phase 5.
 
 Sécurité : si INTERNAL_API_KEY est définie dans l'environnement, toute

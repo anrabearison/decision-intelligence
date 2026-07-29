@@ -1,7 +1,7 @@
 """
 Tests du middleware de clé API interne.
 Actif seulement si INTERNAL_API_KEY est définie dans l'environnement
-(permet de développer sans clé en local, cf. ARCHITECTURE.md Phase 2 vs 5).
+(permet de développer sans clé en local, cf. SPEC.md section 5).
 """
 import io
 import importlib

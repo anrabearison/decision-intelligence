@@ -2,7 +2,7 @@
 Tests de la façade FastAPI - Phase 2.
 Rôle strict de ce service : recevoir un fichier, appeler decision-core,
 retourner le résultat. Aucune logique métier ici (pas d'utilisateur,
-pas de persistance) - cf. ARCHITECTURE.md.
+pas de persistance) - cf. SPEC.md section 5.
 """
 import io
 import os

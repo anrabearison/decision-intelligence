@@ -2,7 +2,7 @@
 
 **Repo** : `github.com/anrabearison/decision-intelligence`
 **Dernière mise à jour** : Phase 1a complète, Phase 2 en cours (frontend fonctionnel)
-**Statut des tests** : 104 tests `decision-core`, 18 tests `decision-engine`, 0 test `frontend`
+**Statut des tests** : 104 tests `decision-core`, 18 tests `decision-engine`, 7 tests `frontend` (131 au total)
 
 ---
 
@@ -32,7 +32,7 @@ Pour une analyse ponctuelle sur un petit jeu de données, un chat IA générique
 | 1a — Decision Core Foundation | Import, validation, profiling, simulation simple, rapport | ✅ Complète |
 | 1a.5 — Validation légère | Rapport montré à 5-10 personnes cibles | ⏳ Non réalisée |
 | 1b — Decision Core Analytics | Monte Carlo, distributions, sensibilité | ⏳ Non commencée |
-| 2 — Decision Studio | Interface React + façade FastAPI | 🚧 Frontend fonctionnel, pas de tests automatisés |
+| 2 — Decision Studio | Interface React + façade FastAPI | ✅ Fonctionnel, testé (frontend + backend) |
 | 3 — Decision Intelligence | Prédiction, risque, recommandation | ⏳ Non commencée |
 | 4 — AI Layer | LLM Gateway, explications, chat, RAG | ⏳ Non commencée |
 | 4.5 — Market Validation | Tests utilisateurs approfondis | ⏳ Non réalisée |
@@ -246,7 +246,7 @@ cd decision-core && pip install -e . && pytest tests/ -v
 cd decision-engine && pip install -e ../decision-core -r requirements.txt && pytest tests/ -v
 ```
 
-104 + 18 = 122 tests, structurés en classes par cas (`TestX`, une méthode = un scénario).
+104 + 18 + 7 = 129 tests, structurés en classes par cas (`TestX`, une méthode = un scénario).
 
 ---
 
@@ -302,6 +302,8 @@ Chaque correction a suivi le cycle TDD (test rouge reproduisant le bug → fix �
 | Base de données | Supabase (plan gratuit) | 500 Mo BDD, 1 Go Storage, pause après 7j d'inactivité |
 
 `docker-compose.yml` réservé au développement local (tous les services + PostgreSQL ensemble), jamais utilisé en production sur ces plateformes.
+
+**Upload de fichier en Phase 5** : en Phase 2, le navigateur envoie le fichier directement à `decision-engine` (un seul saut réseau). Une fois NestJS inséré en Phase 5, le fichier ne doit jamais transiter deux fois (navigateur → NestJS → FastAPI) — solution retenue : upload direct du navigateur vers Supabase Storage avec URL signée, puis seule l'URL (pas le fichier) est transmise à `decision-engine`.
 
 ---
 
