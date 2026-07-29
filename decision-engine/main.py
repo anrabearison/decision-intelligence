@@ -19,6 +19,7 @@ from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from decision_core.importer import UnsupportedFileFormatError, import_file
 from decision_core.report import generate_report
@@ -51,6 +52,14 @@ def _format_client_error(exc: Exception) -> str:
 
 
 app = FastAPI(title="decision-engine", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Autorise le frontend React/Vite
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 async def handle_client_data_error(request: Request, exc: Exception):
