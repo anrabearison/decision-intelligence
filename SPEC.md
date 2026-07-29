@@ -2,7 +2,7 @@
 
 **Repo** : `github.com/anrabearison/decision-intelligence`
 **Dernière mise à jour** : Phase 1a complète, Phase 2 en cours (frontend fonctionnel)
-**Statut des tests** : 104 tests `decision-core`, 18 tests `decision-engine`, 7 tests `frontend` (131 au total)
+**Statut des tests** : 104 tests `decision-core`, 18 tests `decision-engine`, 7 tests `frontend` (129 au total)
 
 ---
 
