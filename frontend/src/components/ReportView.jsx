@@ -30,22 +30,34 @@ export default function ReportView({ report }) {
         <section className="report__block">
           <h3 className="report__block-title">Corrélations principales</h3>
           <div className="corr-list">
-            {top_correlations.map((c, i) => (
-              <div className="corr-row" key={i}>
-                <span className="corr-row__pair">
-                  {c.column_a} <span className="corr-row__arrow">↔</span> {c.column_b}
-                </span>
-                <div className="corr-row__bar-track">
-                  <div
-                    className={`corr-row__bar ${c.value >= 0 ? 'is-positive' : 'is-negative'}`}
-                    style={{ width: `${Math.abs(c.value) * 100}%` }}
-                  />
+            {top_correlations.map((c, i) => {
+              const isSignificant = c.significant_after_correction !== false
+              return (
+                <div className={`corr-row ${isSignificant ? '' : 'is-not-significant'}`} key={i}>
+                  <span className="corr-row__pair">
+                    {c.column_a} <span className="corr-row__arrow">↔</span> {c.column_b}
+                    {!isSignificant && (
+                      <span className="corr-row__flag mono" title="Peut être due au hasard (comparaisons multiples)">
+                        non significatif
+                      </span>
+                    )}
+                  </span>
+                  <div className="corr-row__bar-track">
+                    <div
+                      className={`corr-row__bar ${c.value >= 0 ? 'is-positive' : 'is-negative'}`}
+                      style={{ width: `${Math.abs(c.value) * 100}%` }}
+                    />
+                  </div>
+                  <span className="corr-row__value mono">{c.value.toFixed(2)}</span>
                 </div>
-                <span className="corr-row__value mono">{c.value.toFixed(2)}</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
-          <p className="report__disclaimer">Corrélation n'implique pas causalité.</p>
+          <p className="report__disclaimer">
+            Corrélation n'implique pas causalité. « Non significatif » : sur le nombre de
+            paires testées, cette relation peut apparaître forte par pur hasard
+            (correction statistique appliquée : Benjamini-Hochberg).
+          </p>
         </section>
       )}
 

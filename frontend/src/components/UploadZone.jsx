@@ -1,19 +1,34 @@
 import { useCallback, useRef, useState } from 'react'
 
-export default function UploadZone({ onFileSelected, disabled }) {
+// Reflète MAX_FILE_SIZE_MB côté decision-engine (main.py) - vérifier
+// côté client évite d'uploader inutilement un fichier qui sera de
+// toute façon rejeté par le serveur (trouvé en revue de code : le
+// texte "max 50 Mo" était affiché mais jamais vérifié avant l'envoi).
+const MAX_FILE_SIZE_MB = 50
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+
+export default function UploadZone({ onFileSelected, onError, disabled }) {
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef(null)
+
+  const validateAndSelect = useCallback((file) => {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      onError?.(`Fichier trop volumineux (${(file.size / (1024 * 1024)).toFixed(1)} Mo) — maximum ${MAX_FILE_SIZE_MB} Mo.`)
+      return
+    }
+    onFileSelected(file)
+  }, [onFileSelected, onError])
 
   const handleDrop = useCallback((e) => {
     e.preventDefault()
     setIsDragging(false)
     const file = e.dataTransfer.files?.[0]
-    if (file) onFileSelected(file)
-  }, [onFileSelected])
+    if (file) validateAndSelect(file)
+  }, [validateAndSelect])
 
   const handleChange = (e) => {
     const file = e.target.files?.[0]
-    if (file) onFileSelected(file)
+    if (file) validateAndSelect(file)
   }
 
   return (

@@ -31,6 +31,11 @@ export default function App() {
     }
   }
 
+  const handleClientValidationError = (message) => {
+    setError(message)
+    setStatus('error')
+  }
+
   const reset = () => {
     setFile(null)
     setStatus('idle')
@@ -55,7 +60,7 @@ export default function App() {
                 calculés, pas devinés.
               </p>
             </div>
-            <UploadZone onFileSelected={runAnalysis} />
+            <UploadZone onFileSelected={runAnalysis} onError={handleClientValidationError} />
 
             <details className="sim-config" onToggle={(e) => setSimEnabled(e.target.open)}>
               <summary className="mono">+ Configurer une simulation (facultatif)</summary>

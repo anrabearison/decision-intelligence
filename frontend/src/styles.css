@@ -242,6 +242,19 @@ body {
 
 .corr-list { display: flex; flex-direction: column; gap: 12px; }
 .corr-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 12px; align-items: center; }
+.corr-row.is-not-significant { opacity: 0.55; }
+.corr-row__flag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10.5px;
+  color: var(--muted);
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
 .corr-row__pair { font-size: 13px; }
 .corr-row__arrow { color: var(--muted); }
 .corr-row__bar-track {
