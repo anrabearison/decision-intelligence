@@ -11,6 +11,7 @@ from decision_core.profiling import (
     descriptive_stats,
     correlation_matrix,
     correlation_pvalues,
+    legitimate_numeric_columns,
 )
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -99,6 +100,57 @@ class TestCorrelationMatrixExcludesIdentifiers:
         })
         corr = correlation_matrix(df)
         assert "Quantite" in corr.columns
+
+
+class TestIndexLikeDetectionDoesNotFlagRealTrendingVariables:
+    def test_smooth_trending_variable_with_non_unit_step_is_not_excluded(self):
+        # Bug réel trouvé en audit : une vraie variable avec une tendance
+        # linéaire lisse et peu de bruit (ex: température qui augmente
+        # régulièrement) était exclue à tort comme "identifiant", parce
+        # que l'ancienne heuristique se basait uniquement sur la
+        # corrélation avec l'ordre des lignes (>0.999), sans distinguer
+        # un pas de 1 (identifiant) d'un pas quelconque (vraie variable).
+        df = pd.DataFrame({
+            "Jour": range(1, 31),
+            "Temperature": [15 + i * 0.3 for i in range(30)],
+        })
+        legit = legitimate_numeric_columns(df)
+        assert "Temperature" in legit
+
+    def test_sequential_integer_identifier_with_step_one_is_still_excluded(self):
+        # Non-régression : le vrai cas d'identifiant (pas constant de 1)
+        # doit rester détecté.
+        df = pd.DataFrame({
+            "Numero_lot": range(1, 31),
+            "Temperature": [70, 71, 70, 72, 71, 70, 73, 71, 70, 72] * 3,
+        })
+        legit = legitimate_numeric_columns(df)
+        assert "Numero_lot" not in legit
+
+    def test_identifier_not_starting_at_one_is_still_excluded(self):
+        # Un identifiant ne commence pas toujours à 1 (ex: ID base de
+        # données commençant à 1001) - seul le pas constant de 1 compte.
+        df = pd.DataFrame({
+            "ID_client": range(1001, 1031),
+            "Montant": [70, 71, 70, 72, 71, 70, 73, 71, 70, 72] * 3,
+        })
+        legit = legitimate_numeric_columns(df)
+        assert "ID_client" not in legit
+
+    def test_duplicate_column_names_do_not_wrongly_exclude_legitimate_prices(self):
+        # Cas ayant révélé le bug : deux colonnes nommées "Prix" (export
+        # mal formé), valeurs croissantes par coïncidence avec un pas
+        # non-unitaire (un prix n'incrémente jamais exactement de 1 en
+        # euros, contrairement à un identifiant) - ne doivent plus être
+        # exclues à tort.
+        df = pd.DataFrame({
+            "Produit": [f"P{i}" for i in range(30)],
+            "Prix": [10 + i * 2.5 for i in range(30)],
+            "Prix.1": [20 + i * 3.1 for i in range(30)],
+        })
+        legit = legitimate_numeric_columns(df)
+        assert "Prix" in legit
+        assert "Prix.1" in legit
 
 
 class TestMultipleComparisonsCorrection:

@@ -18,11 +18,6 @@ FDR_SIGNIFICANCE_LEVEL = 0.05
 # couvrir toutes les colonnes, seul le calcul quadratique est limité.
 MAX_COLUMNS_FOR_CORRELATION = 50
 
-# Seuil au-delà duquel une colonne numérique quasi-parfaitement corrélée à
-# l'ordre des lignes est traitée comme un identifiant/index plutôt qu'une
-# vraie variable explicative (ex: numéro de lot, ID séquentiel).
-INDEX_LIKE_CORRELATION_THRESHOLD = 0.999
-
 
 def descriptive_stats(series: pd.Series) -> dict:
     return {
@@ -42,14 +37,26 @@ def _is_index_like(series: pd.Series) -> bool:
     un identifiant (la branche 'identifier' de type_detection ne s'applique
     qu'aux colonnes non numériques). Un identifiant numérique comme
     'Numero_lot' passe donc entre les mailles - d'où cette vérification
-    dédiée, basée sur la corrélation quasi parfaite avec l'ordre des lignes,
-    plus fiable qu'un simple ratio d'unicité pour ce cas précis.
-    """
+    dédiée.
+
+    Critère : pas constant de exactement ±1 entre valeurs consécutives -
+    la signature d'un identifiant séquentiel (1,2,3... ou 1001,1002,...).
+    Ancien critère (corrélation avec l'ordre des lignes > 0.999) rejeté :
+    trouvé en audit, il produisait un faux positif sur toute vraie
+    variable avec une tendance linéaire lisse et peu de bruit (ex: une
+    température qui augmente de façon quasi parfaitement régulière),
+    statistiquement indiscernable d'un identifiant par la seule
+    corrélation alors que sémantiquement différente. Le pas constant de
+    1 est beaucoup plus spécifique aux identifiants réels."""
     if len(series) < 4:
         return False
-    row_order = np.arange(len(series))
-    corr = np.corrcoef(series.values, row_order)[0, 1]
-    return abs(corr) > INDEX_LIKE_CORRELATION_THRESHOLD
+    values = series.values
+    if not np.all(values == np.floor(values)):
+        return False  # un identifiant est toujours entier
+    diffs = np.diff(values)
+    if len(diffs) == 0:
+        return False
+    return bool(np.all(diffs == diffs[0]) and abs(diffs[0]) == 1)
 
 
 def legitimate_numeric_columns(df: pd.DataFrame) -> list:
