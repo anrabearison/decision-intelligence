@@ -82,6 +82,14 @@ def _detect_consistent_delimiter(text: str) -> str:
     except csv.Error:
         pass
 
+    # Fichier à une seule colonne : aucun délimiteur n'apparaît dans
+    # l'en-tête, donc tous les candidats donnent 1 champ - c'est un cas
+    # légitime (pas une incohérence), pas besoin de délimiteur du tout.
+    # Trouvé en audit : la boucle ci-dessous rejetait ce cas à tort,
+    # exigeant >= 2 champs pour TOUT candidat.
+    if all(len(lines[0].split(d)) == 1 for d in candidates):
+        return ","
+
     for delimiter in candidates:
         header_field_count = len(lines[0].split(delimiter))
         if header_field_count < 2:

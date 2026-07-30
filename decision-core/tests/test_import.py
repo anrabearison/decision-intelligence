@@ -144,6 +144,19 @@ class TestImportFrenchDecimalComma:
             pass  # comportement attendu et acceptable
 
 
+class TestImportSingleColumnCsv:
+    def test_imports_single_column_file_without_delimiter(self, tmp_path):
+        # Régression trouvée en audit : le fix de cohérence de délimiteur
+        # (P0) exigeait >= 2 champs dans l'en-tête pour tout délimiteur
+        # candidat, rejetant à tort un fichier à une seule colonne (aucun
+        # délimiteur n'est nécessaire ni présent dans ce cas légitime).
+        f = tmp_path / "single_col.csv"
+        f.write_text("Ventes\n100\n102\n98\n105\n")
+        df = import_file(str(f))
+        assert list(df.columns) == ["Ventes"]
+        assert len(df) == 4
+
+
 class TestImportEncodingFallback:
     def test_reads_windows_1252_encoded_file(self, tmp_path):
         # Export Excel Windows typique (très courant en contexte FR) :
