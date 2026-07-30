@@ -166,6 +166,20 @@ class TestReportWithSimulation:
         report = generate_report(df, simulation_config={"target": "Y", "feature": "X", "change_pct": 0.1})
         assert any("influent" in w.lower() for w in report["warnings"])
 
+    def test_influential_point_warning_never_makes_a_false_claim_about_iqr(self):
+        # Trouvé en audit : le message affirmait "même s'il n'est pas
+        # détecté comme anomalie sur une seule colonne" - affirmation
+        # fausse dans ce cas précis, où le point influent EST aussi
+        # détecté par IQR sur les deux colonnes. Le message ne doit
+        # jamais faire d'affirmation dont la véracité dépend du rapport.
+        np.random.seed(3)
+        prix = list(np.random.uniform(20, 30, 29)) + [9999]
+        ventes = list(100 - 2 * np.array(prix[:29]) + np.random.normal(0, 3, 29)) + [5]
+        df = pd.DataFrame({"Prix": prix, "Ventes": ventes})
+        report = generate_report(df, simulation_config={"target": "Ventes", "feature": "Prix", "change_pct": 0.1})
+        influence_warning = next(w for w in report["warnings"] if "influent" in w.lower())
+        assert "même s'il n'est pas détecté" not in influence_warning
+
     def test_warns_when_effective_simulation_sample_is_small_despite_large_dataset(self):
         # Dataset global de 40 lignes (au-dessus du seuil "petit
         # échantillon" global), mais seulement 5 valeurs valides sur les

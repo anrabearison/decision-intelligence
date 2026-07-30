@@ -153,9 +153,8 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
                 f"{influence['indices']}) : ce résultat dépend fortement "
                 f"d'un ou plusieurs points spécifiques - une corrélation "
                 f"ou une régression peut être largement déformée par un "
-                f"seul point atypique, même s'il n'est pas détecté comme "
-                f"anomalie sur une seule colonne. Vérifier ces valeurs "
-                f"avant de s'y fier."
+                f"seul point atypique. Vérifier ces valeurs avant de "
+                f"s'y fier."
             )
 
     return report
