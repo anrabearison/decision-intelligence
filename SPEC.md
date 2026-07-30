@@ -2,7 +2,7 @@
 
 **Repo** : `github.com/anrabearison/decision-intelligence`
 **Dernière mise à jour** : Phase 1a complète, Phase 2 en cours (frontend fonctionnel)
-**Statut des tests** : 108 tests `decision-core`, 18 tests `decision-engine`, 7 tests `frontend` (133 au total)
+**Statut des tests** : 113 tests `decision-core`, 18 tests `decision-engine`, 7 tests `frontend` (138 au total)
 
 ---
 
@@ -246,7 +246,7 @@ cd decision-core && pip install -e . && pytest tests/ -v
 cd decision-engine && pip install -e ../decision-core -r requirements.txt && pytest tests/ -v
 ```
 
-108 + 18 + 7 = 133 tests, structurés en classes par cas (`TestX`, une méthode = un scénario).
+113 + 18 + 7 = 138 tests, structurés en classes par cas (`TestX`, une méthode = un scénario).
 
 ---
 
