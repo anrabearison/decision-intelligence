@@ -46,6 +46,29 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
     numeric_cols = legitimate_numeric_columns(df)
     profiling = {col: descriptive_stats(df[col]) for col in numeric_cols}
 
+    # Détection d'anomalies (IQR) par colonne numérique - trouvé en audit :
+    # ce module était construit et testé mais jamais appelé ici, alors que
+    # le texte d'avertissement ci-dessus prétend déjà qu'elle fait partie
+    # de l'analyse. Seules les colonnes avec anomalies détectées ET un
+    # échantillon jugé fiable sont incluses (évite un avertissement
+    # trompeur sur un échantillon trop petit).
+    anomalies = {}
+    for col in numeric_cols:
+        result = detect_anomalies_iqr(df[col])
+        if result["indices"] and result["reliable"]:
+            anomalies[col] = result
+    if anomalies:
+        cols_with_anomalies = ", ".join(anomalies.keys())
+        total_anomalies = sum(len(a["indices"]) for a in anomalies.values())
+        warnings.append(
+            f"Anomalie(s) détectée(s) sur {len(anomalies)} colonne(s) "
+            f"({cols_with_anomalies}) : {total_anomalies} valeur(s) "
+            f"hors de la plage habituelle au total, potentiellement des "
+            f"erreurs de saisie ou des cas exceptionnels à vérifier - "
+            f"elles peuvent fortement fausser la moyenne et l'écart-type "
+            f"affichés."
+        )
+
     corr_pairs = correlation_pvalues(df)
     top_correlations = _extract_top_correlations(corr_pairs)
 
@@ -80,6 +103,7 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
         },
         "validation": validation,
         "profiling": profiling,
+        "anomalies": anomalies,
         "top_correlations": top_correlations,
         "warnings": warnings,
     }

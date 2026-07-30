@@ -86,6 +86,46 @@ class TestReportTopCorrelations:
             seen.add(pair)
 
 
+class TestReportIncludesAnomalyDetection:
+    def test_report_flags_obvious_anomaly(self):
+        # Cas trouvé en audit : detect_anomalies_iqr existait, testé,
+        # mais jamais appelé dans generate_report - une anomalie
+        # évidente (5000 parmi des valeurs ~100) passait totalement
+        # inaperçue, alors que le texte du rapport prétendait déjà que
+        # la détection d'anomalies faisait partie de l'analyse.
+        df = pd.DataFrame({
+            "Ventes": [100, 102, 98, 105, 99, 101, 103, 97, 100, 102,
+                       101, 99, 103, 100, 98, 102, 101, 5000, 99, 100,
+                       103, 101, 98, 100, 102, 99, 101, 100, 103, 98],
+        })
+        report = generate_report(df)
+        assert "anomalies" in report
+        assert "Ventes" in report["anomalies"]
+        assert 17 in report["anomalies"]["Ventes"]["indices"]
+
+    def test_no_anomalies_key_for_column_without_anomalies(self):
+        df = pd.DataFrame({"Valeurs": [10, 11, 9, 10, 12, 9, 11, 10, 9, 11] * 3})
+        report = generate_report(df)
+        assert "Valeurs" not in report.get("anomalies", {})
+
+    def test_warns_when_anomalies_detected(self):
+        df = pd.DataFrame({
+            "Ventes": [100, 102, 98, 105, 99, 101, 103, 97, 100, 102,
+                       101, 99, 103, 100, 98, 102, 101, 5000, 99, 100,
+                       103, 101, 98, 100, 102, 99, 101, 100, 103, 98],
+        })
+        report = generate_report(df)
+        assert any("anomalie" in w.lower() for w in report["warnings"])
+
+    def test_no_anomaly_warning_when_sample_too_small_to_be_reliable(self):
+        # Sous le seuil MIN_RELIABLE_SAMPLE_SIZE (30), detect_anomalies_iqr
+        # marque reliable=False - ne doit jamais produire d'avertissement
+        # "anomalie détectée" trompeur sur un échantillon non fiable.
+        df = pd.DataFrame({"Valeurs": [10, 11, 9, 10, 12, 9, 11, 10, 500]})
+        report = generate_report(df)
+        assert not any("anomalie" in w.lower() and "détectée" in w.lower() for w in report["warnings"])
+
+
 class TestReportWithSimulation:
     def test_report_includes_simulation_when_provided(self):
         df = load("ventes_test.csv")
