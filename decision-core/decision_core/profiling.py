@@ -5,7 +5,7 @@ import itertools
 import numpy as np
 import pandas as pd
 from scipy import stats
-from decision_core.type_detection import detect_column_type
+from decision_core.type_detection import is_identifier_column
 
 FDR_SIGNIFICANCE_LEVEL = 0.05
 
@@ -29,36 +29,6 @@ def descriptive_stats(series: pd.Series) -> dict:
     }
 
 
-def _is_index_like(series: pd.Series) -> bool:
-    """Détecte un identifiant numérique séquentiel (ex: 1, 2, 3, ...).
-
-    detect_column_type() classe toute colonne numérique comme
-    numeric_discrete/continuous avant même de vérifier si elle ressemble à
-    un identifiant (la branche 'identifier' de type_detection ne s'applique
-    qu'aux colonnes non numériques). Un identifiant numérique comme
-    'Numero_lot' passe donc entre les mailles - d'où cette vérification
-    dédiée.
-
-    Critère : pas constant de exactement ±1 entre valeurs consécutives -
-    la signature d'un identifiant séquentiel (1,2,3... ou 1001,1002,...).
-    Ancien critère (corrélation avec l'ordre des lignes > 0.999) rejeté :
-    trouvé en audit, il produisait un faux positif sur toute vraie
-    variable avec une tendance linéaire lisse et peu de bruit (ex: une
-    température qui augmente de façon quasi parfaitement régulière),
-    statistiquement indiscernable d'un identifiant par la seule
-    corrélation alors que sémantiquement différente. Le pas constant de
-    1 est beaucoup plus spécifique aux identifiants réels."""
-    if len(series) < 4:
-        return False
-    values = series.values
-    if not np.all(values == np.floor(values)):
-        return False  # un identifiant est toujours entier
-    diffs = np.diff(values)
-    if len(diffs) == 0:
-        return False
-    return bool(np.all(diffs == diffs[0]) and abs(diffs[0]) == 1)
-
-
 def legitimate_numeric_columns(df: pd.DataFrame) -> list:
     """Colonnes numériques hors identifiants (ex: numéro de lot, ID
     séquentiel) - à utiliser partout où des statistiques ou corrélations
@@ -68,7 +38,7 @@ def legitimate_numeric_columns(df: pd.DataFrame) -> list:
     numeric_df = df.select_dtypes(include="number")
     return [
         col for col in numeric_df.columns
-        if detect_column_type(df[col]) != "identifier" and not _is_index_like(df[col])
+        if not is_identifier_column(df[col])
     ]
 
 

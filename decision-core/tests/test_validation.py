@@ -51,3 +51,25 @@ class TestValidationProblematicDataset:
         n_rows_before = len(df)
         validate_dataset(df)
         assert len(df) == n_rows_before  # aucune correction/suppression automatique
+
+    def test_detects_duplicates_with_non_english_identifier_column_name(self):
+        # Trouvé en audit : l'exclusion précédente ne reconnaissait que
+        # la colonne nommée exactement "id" - un identifiant nommé
+        # "Identifiant" (français, très courant) n'était jamais exclu,
+        # faisant passer inaperçus de vrais doublons métier.
+        df = pd.DataFrame({
+            "Identifiant": [1, 2, 3, 4, 5],
+            "Produit": ["Chaise", "Chaise", "Table", "Table", "Lampe"],
+            "Prix": [50, 60, 100, 100, 30],
+        })
+        result = validate_dataset(df)
+        assert result["duplicates_count"] == 1
+
+    def test_does_not_crash_when_every_column_looks_like_an_identifier(self):
+        # Cas limite trouvé en écrivant le fix ci-dessus : si toutes les
+        # colonnes ressemblent à un identifiant (ex: deux séquences 1..n),
+        # exclure tout laisserait un subset vide - df.duplicated(subset=[])
+        # plante avec une erreur pandas interne sans ce garde-fou.
+        df = pd.DataFrame({"a": range(50), "b": range(50, 100)})
+        result = validate_dataset(df)
+        assert result["duplicates_count"] == 0

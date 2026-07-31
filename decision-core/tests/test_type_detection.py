@@ -57,6 +57,12 @@ class TestTypeDetectionTroupeau:
 
 
 class TestTypeDetectionEdgeCases:
+    def test_o_n_french_abbreviation_is_boolean(self):
+        # Abréviation française très courante (Oui/Non) - trouvée en
+        # audit, absente de la liste initiale de paires booléennes.
+        s = pd.Series(["O", "N", "O", "O", "N", "O", "N", "O", "O", "N"])
+        assert detect_column_type(s) == "boolean"
+
     def test_all_unique_strings_is_identifier_or_text(self):
         s = pd.Series(["a1", "b2", "c3", "d4", "e5"])
         assert detect_column_type(s) in ("identifier", "text_free")
