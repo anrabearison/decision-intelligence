@@ -48,6 +48,28 @@ class TestGenerateReportStructure:
         assert "Numero_lot" not in report["profiling"]
         assert "Temperature" in report["profiling"]
 
+    def test_warns_explicitly_when_no_numeric_column_exists(self):
+        # Trouvé en audit : un dataset entièrement catégoriel produisait
+        # un rapport vide (profiling: {}, top_correlations: [], anomalies:
+        # {}) sans jamais expliquer pourquoi - indiscernable pour
+        # l'utilisateur d'un cas où l'analyse a simplement ne rien trouvé
+        # d'intéressant sur de vraies colonnes numériques.
+        df = pd.DataFrame({
+            "Produit": ["Chaise", "Table", "Lampe"] * 10,
+            "Ville": ["Paris", "Lyon", "Marseille"] * 10,
+        })
+        report = generate_report(df)
+        assert any(
+            "aucune colonne numérique" in w.lower() for w in report["warnings"]
+        )
+
+    def test_no_such_warning_when_numeric_columns_exist(self):
+        df = load("ventes_test.csv")
+        report = generate_report(df)
+        assert not any(
+            "aucune colonne numérique" in w.lower() for w in report["warnings"]
+        )
+
 
 class TestReportSmallSampleWarning:
     def test_warns_on_small_sample(self):

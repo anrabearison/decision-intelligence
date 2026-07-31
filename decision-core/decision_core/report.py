@@ -46,6 +46,15 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
     numeric_cols = legitimate_numeric_columns(df)
     profiling = {col: descriptive_stats(df[col]) for col in numeric_cols}
 
+    if not numeric_cols:
+        warnings.append(
+            "Aucune colonne numérique exploitable détectée dans ce "
+            "fichier : statistiques, corrélations, détection d'anomalies "
+            "et simulation ne peuvent pas être calculées. Vérifiez que "
+            "vos colonnes numériques sont bien reconnues comme telles "
+            "(voir les limites de détection dans la documentation)."
+        )
+
     # Détection d'anomalies (IQR) par colonne numérique - trouvé en audit :
     # ce module était construit et testé mais jamais appelé ici, alors que
     # le texte d'avertissement ci-dessus prétend déjà qu'elle fait partie
