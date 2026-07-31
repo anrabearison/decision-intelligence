@@ -15,7 +15,6 @@ reste ouvert, appelé directement par le frontend.
 import logging
 import os
 import tempfile
-from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
@@ -53,9 +52,20 @@ def _format_client_error(exc: Exception) -> str:
 
 app = FastAPI(title="decision-engine", version="0.1.0")
 
+# Origines autorisées pour CORS - configurable via ALLOWED_ORIGINS
+# (liste séparée par des virgules), pour permettre un frontend déployé
+# ailleurs qu'en local (Vercel, etc.) sans modifier le code. Défaut :
+# localhost:5173 (dev local React/Vite).
+_allowed_origins_env = os.environ.get("ALLOWED_ORIGINS")
+ALLOWED_ORIGINS = (
+    [origin.strip() for origin in _allowed_origins_env.split(",")]
+    if _allowed_origins_env
+    else ["http://localhost:5173"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Autorise le frontend React/Vite
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,6 +92,15 @@ app.add_exception_handler(Exception, generic_error_handler)
 
 @app.middleware("http")
 async def verify_internal_key(request: Request, call_next):
+    # Un navigateur n'envoie jamais de header personnalisé (X-Internal-Key)
+    # sur une requête préflight OPTIONS - c'est une contrainte du protocole
+    # CORS, pas un oubli du frontend. Sans cette exemption, le préflight
+    # serait bloqué en 403 dès que INTERNAL_API_KEY est actif, cassant
+    # totalement le CORS (trouvé en audit). Seule la vraie requête
+    # (GET/POST...) qui suit doit être protégée par la clé.
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     expected_key = os.environ.get("INTERNAL_API_KEY")
     if expected_key:
         provided_key = request.headers.get("X-Internal-Key")
