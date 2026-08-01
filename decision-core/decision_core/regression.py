@@ -111,7 +111,14 @@ def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -
     # des features indépendantes donnaient ~1900, pas < 30 comme attendu).
     # Standardisation (centrage-réduction) avant calcul pour isoler la
     # vraie colinéarité des simples différences d'unités/échelles.
-    X_standardized = (X - X.mean(axis=0)) / X.std(axis=0)
+    # ddof=1 explicite : par cohérence avec pandas.std() (utilisé partout
+    # ailleurs dans le codebase, ex: profiling.py, simulation.py), qui
+    # calcule l'écart-type d'échantillon par défaut - contrairement à
+    # numpy.std() qui utilise ddof=0 (population) par défaut. Sans impact
+    # sur le résultat ici (le nombre de conditionnement est invariant à
+    # une mise à l'échelle uniforme, vérifié empiriquement), mais évite
+    # une incohérence de style qui pourrait dérouter un futur lecteur.
+    X_standardized = (X - X.mean(axis=0)) / X.std(axis=0, ddof=1)
     X_standardized_with_intercept = np.column_stack([np.ones(len(X)), X_standardized])
     condition_number = float(np.linalg.cond(X_standardized_with_intercept))
 
