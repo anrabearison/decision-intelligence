@@ -23,6 +23,7 @@ from decision_core.anomaly_detection import detect_anomalies_iqr, MIN_RELIABLE_S
 from decision_core.simulation import simulate_scenario
 from decision_core.influence_detection import detect_influential_points
 from decision_core.regression import _validate_regression_inputs
+from decision_core.derived_columns import detect_derived_relationships
 
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
 
@@ -79,6 +80,22 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
         )
 
     corr_pairs = correlation_pvalues(df)
+
+    derived_relationships = detect_derived_relationships(df, numeric_cols)
+    if derived_relationships:
+        derived_names = sorted({name for pair in derived_relationships for name in pair})
+        warnings.append(
+            f"Relation calculée détectée entre {', '.join(derived_names)} : "
+            f"une de ces colonnes semble dérivée mathématiquement des "
+            f"autres (ex: Total = Prix × Quantité). Leur forte "
+            f"corrélation n'est donc pas un insight - c'est une "
+            f"conséquence directe du calcul, pas une découverte."
+        )
+        corr_pairs = [
+            p for p in corr_pairs
+            if frozenset([p["column_a"], p["column_b"]]) not in derived_relationships
+        ]
+
     top_correlations = _extract_top_correlations(corr_pairs)
 
     if len(numeric_cols) > MAX_COLUMNS_FOR_CORRELATION:

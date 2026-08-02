@@ -231,6 +231,33 @@ class TestReportWithSimulation:
         report = generate_report(df)
         assert any("50" in w and "colonnes" in w.lower() for w in report["warnings"])
 
+    def test_excludes_derived_column_relationship_from_top_correlations(self):
+        # Trouvé en test de lisibilité simulé : Total = Prix * Quantité
+        # apparaissait comme "la corrélation la plus forte" - une
+        # tautologie arithmétique, pas un insight. Ne doit plus jamais
+        # être présenté comme tel.
+        rng = np.random.default_rng(0)
+        n = 40
+        prix = rng.uniform(10, 100, n)
+        quantite = rng.integers(1, 20, n).astype(float)
+        total = prix * quantite
+        autre = rng.normal(0, 1, n)  # variable non liée, pour vérifier qu'elle reste éligible
+        df = pd.DataFrame({"Prix": prix, "Quantite": quantite, "Total": total, "Autre": autre})
+        report = generate_report(df)
+        pairs = {frozenset([c["column_a"], c["column_b"]]) for c in report["top_correlations"]}
+        assert frozenset(["Prix", "Total"]) not in pairs
+        assert frozenset(["Quantite", "Total"]) not in pairs
+
+    def test_warns_about_derived_column_relationship(self):
+        rng = np.random.default_rng(0)
+        n = 40
+        prix = rng.uniform(10, 100, n)
+        quantite = rng.integers(1, 20, n).astype(float)
+        total = prix * quantite
+        df = pd.DataFrame({"Prix": prix, "Quantite": quantite, "Total": total})
+        report = generate_report(df)
+        assert any("calculée" in w.lower() or "dérivée" in w.lower() for w in report["warnings"])
+
 
 class TestRenderTextSummary:
     def test_text_summary_is_string(self):
