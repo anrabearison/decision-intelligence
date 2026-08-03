@@ -102,6 +102,7 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 * **Résultat obtenu** : Baseline = 15,67/20, Simulation = 17,57/20 (+12,15%), $R^2 = 0,890$.
 * **Analyse & Critique Métier** :
   - **Dépassement du plafond (26/20)** : Sans bornes institutionnelles (0 à 20), la régression linéaire projette des notes > 20 pour un temps de révision élevé.
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2)** : Le moteur détecte désormais le rendement décroissant (optimum non-linéaire) entre le temps de révision/quiz et les notes, avertissant des limites du modèle linéaire. Le dépassement de plafond (bornes physiques) reste à traiter (Phase P2/P3).</span>
 
 ### Test 8 : Immobilier & Estimation de Biens
 * **Fichier de test** : `examples/immobilier_estimations_2025.csv`
@@ -354,3 +355,7 @@ Le moteur de régression suppose implicitement une distribution gaussienne (loi 
 *   **[Août 2026] Phase P1.1 - Variables Catégorielles** :
     *   Ajout de la détection des sous-groupes structurants via l'analyse de la variance ($\eta^2$). Le moteur avertit désormais quand une variable catégorielle explique une forte variance de la cible.
     *   Mise à disposition d'un encodage optionnel One-Hot (`encode_categorical=True`).
+*   **[Août 2026] Phase P1.2 - Non-Linéarité (Paliers & Optimums)** :
+    *   Implémentation de la détection des relations par paliers (step functions, ANOVA par tranches).
+    *   Implémentation de la détection des courbes paraboliques et optima locaux (régression polynomiale degré 2).
+    *   Avertissements générés lorsque le modèle linéaire passe à côté d'un rendement décroissant ou d'une tarification par tranches.

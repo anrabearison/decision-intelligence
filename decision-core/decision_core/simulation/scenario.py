@@ -65,15 +65,20 @@ def simulate_scenario(
 
     model = fit_simple_regression(df, target=config.target, feature=config.feature)
 
+    # Extraction du coefficient et de l'intercept selon le type de modèle
+    # (linéaire ou logistique) pour éviter AttributeError sur LogisticRegressionResult.
+    slope = getattr(model, "slope", None) or getattr(model, "coefficient", None)
+    intercept = model.intercept
+
     ref_feature_value = (
         config.baseline_feature_value
         if config.baseline_feature_value is not None
         else df[config.feature].mean()
     )
 
-    baseline = model.intercept + model.slope * ref_feature_value
+    baseline = intercept + slope * ref_feature_value
     simulated_feature_value = ref_feature_value * (1 + config.change_pct)
-    simulated = model.intercept + model.slope * simulated_feature_value
+    simulated = intercept + slope * simulated_feature_value
 
     bounds_applied: bool | None = None
     if config.bounds is not None:

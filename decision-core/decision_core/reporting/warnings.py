@@ -202,25 +202,7 @@ def _build_simulation_warnings(
     if nonlinearity_patterns:
         for pattern in nonlinearity_patterns:
             if pattern.feature == simulation_config.feature:
-                if pattern.pattern_type == "u_curve":
-                    warnings.append(
-                        f"Relation non-linéaire détectée (courbe en U) entre "
-                        f"'{pattern.feature}' et '{pattern.target}' : "
-                        f"la simulation linéaire peut être trompeuse sur cette "
-                        f"variable. Les effets ne sont pas proportionnels - "
-                        f"une augmentation de la feature peut avoir un impact "
-                        f"différent selon le niveau de départ."
-                    )
-                elif pattern.pattern_type == "optimum":
-                    warnings.append(
-                        f"Relation non-linéaire détectée (optimum) entre "
-                        f"'{pattern.feature}' et '{pattern.target}' : "
-                        f"la simulation linéaire peut être trompeuse sur cette "
-                        f"variable. Il existe un niveau optimal de la feature "
-                        f"au-delà duquel l'effet s'inverse - la simulation "
-                        f"linéaire ne capture pas cette dynamique."
-                    )
-                elif isinstance(pattern, StepPatternResult):
+                if isinstance(pattern, StepPatternResult):
                     warnings.append(
                         f"Relation non-linéaire détectée (paliers) entre "
                         f"'{pattern.feature}' et '{pattern.target}' : "
@@ -228,6 +210,25 @@ def _build_simulation_warnings(
                         f"variable. La relation fonctionne par tranches de "
                         f"tarification ou seuils, pas par une droite continue."
                     )
+                elif hasattr(pattern, "pattern_type"):
+                    if pattern.pattern_type == "u_curve":
+                        warnings.append(
+                            f"Relation non-linéaire détectée (courbe en U) entre "
+                            f"'{pattern.feature}' et '{pattern.target}' : "
+                            f"la simulation linéaire peut être trompeuse sur cette "
+                            f"variable. Les effets ne sont pas proportionnels - "
+                            f"une augmentation de la feature peut avoir un impact "
+                            f"différent selon le niveau de départ."
+                        )
+                    elif pattern.pattern_type == "optimum":
+                        warnings.append(
+                            f"Relation non-linéaire détectée (optimum) entre "
+                            f"'{pattern.feature}' et '{pattern.target}' : "
+                            f"la simulation linéaire peut être trompeuse sur cette "
+                            f"variable. Il existe un niveau optimal de la feature "
+                            f"au-delà duquel l'effet s'inverse - la simulation "
+                            f"linéaire ne capture pas cette dynamique."
+                        )
 
 
 def _build_nonlinearity_warnings(
