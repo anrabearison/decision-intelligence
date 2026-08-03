@@ -3,7 +3,7 @@
 **Projet** : Decision Intelligence Engine  
 **Composants analysés** : `decision-core` & `decision-engine`  
 **Date d'expérimentation** : Août 2026  
-**Nombre de domaines testés** : 15  
+**Nombre de domaines testés** : 18  
 
 ---
 
@@ -36,6 +36,9 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 | 13 | **Énergie Bâtiments** | `examples/energie_batiments_2025.csv` | `;` / `,` | 15 |
 | 14 | **Marketing Digital** | `examples/marketing_digital_2025.csv` | `;` / `,` | 15 |
 | 15 | **SaaS Abonnements** | `examples/saas_abonnements_2025.csv` | `;` / `,` | 15 |
+| 16 | **Cybersécurité / IT** | `examples/cybersecurite_incidents_2025.csv` | `;` / `,` | 15 |
+| 17 | **Tourisme / Culture** | `examples/tourisme_frequentation_2025.csv` | `;` / `,` | 15 |
+| 18 | **Agriculture / Céréales** | `examples/agriculture_rendement_2025.csv` | `;` / `,` | 15 |
 
 ---
 
@@ -172,6 +175,9 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 | 13 | **Énergie** | `examples/energie_batiments_2025.csv` | ❌ Inadapté | Courbe en U (chauffage hiver vs clim été) invisible en régression simple. |
 | 14 | **Marketing Digital** | `examples/marketing_digital_2025.csv` | ⚠️ Mélangé | Agrégation aveugle de canaux publicitaires hétérogènes (Google vs LinkedIn). |
 | 15 | **SaaS Abonnements** | `examples/saas_abonnements_2025.csv` | ⚠️ Incomplet | Événement binaire de Churn (0/1) estimé par régression linéaire ordinaire au lieu de logistique. |
+| 16 | **Cybersécurité** | `examples/cybersecurite_incidents_2025.csv` | ❌ Inadapté | Distribution Pareto extrême ; sévérité de l'incident (variable texte) ignorée. |
+| 17 | **Tourisme** | `examples/tourisme_frequentation_2025.csv` | ❌ Dangereux | Inversion de causalité : hausse de prix corrélée à la fréquentation (saisonnalité ignorée). |
+| 18 | **Agriculture** | `examples/agriculture_rendement_2025.csv` | ❌ Échec ($R^2=0,0003$) | Relation en courbe gaussienne (optimum de pluie) impossible à capter avec une droite linéaire. |
 
 ---
 
@@ -191,6 +197,31 @@ Ce tableau démontre comment **chaque critique identifiée dans l'audit** est di
 | **8. Incompatibilité avec les tarifications par paliers** | `examples/logistique_livraisons_2025.csv` | Effondrement du modèle ($R^2=0,05$) sur des livraisons à tarifs par tranches de poids fixe. |
 | **9. Régression continue sur comptages discrets** | `examples/industrie_maintenance_2025.csv` | Modèle gaussien appliqué à des nombres entiers d'anomalies (besoin de loi de Poisson/Weibull). |
 | **10. Faux positifs sur les alertes métiers** | `examples/ventes_magasin_2025.csv` | Promotions normales de 5% et 10% qualifiées d'*"anomalies IQR à vérifier"*. |
+
+### Test 16 : Cybersécurité & Incidents IT
+* **Fichier de test** : `examples/cybersecurite_incidents_2025.csv`
+* **Configuration de simulation** : Target = `Cout_Incident_Euros`, Feature = `Nb_Systemes_Touches`, Change % = `+20%`
+* **Résultat obtenu** : Baseline = 167 993 €, Simulation = 217 809 € (+29,65%), $R^2 = 0,914$.
+* **Analyse & Critique Métier** :
+  - **Distribution bimodale extrême (Pareto / Loi de puissance)** : 80% des incidents coûtent moins de 22 000 €, mais 3 incidents critiques (`Critique`) coûtent entre 280 000 € et 950 000 €. La régression linéaire produit une baseline à 167 993 € qui ne correspond à aucune catégorie réelle.
+  - **La sévérité de l'incident (`Criticite`) est ignorée** : C'est la variable texte `Criticite` (Faible / Moyen / Critique) qui explique 95% du coût. Le moteur ne peut pas l'intégrer.
+
+### Test 17 : Tourisme & Fréquentation Culturelle
+* **Fichier de test** : `examples/tourisme_frequentation_2025.csv`
+* **Configuration de simulation** : Target = `Visiteurs_Jour`, Feature = `Prix_Billet_Euros`, Change % = `-10%`
+* **Résultat obtenu** : Baseline = 971 visiteurs/jour, Simulation = 589 visiteurs/jour (-39,27%), $R^2 = 0,470$.
+* **Analyse & Critique Métier** :
+  - **Inversion de causalité** : Le moteur conclut qu'une baisse de prix de 10% ferait chuter les visiteurs de 39% ! En réalité, le prix élevé (16 €) correspond à l'été (haute saison) avec 2 800 visiteurs. C'est la saison qui explique les deux variables — le musée augmente ses prix en haute saison.
+  - **Les vraies variables sont ignorées** : `Saison` et `Vacances_Scolaires` (colonnes texte booléen) expliquent bien mieux la fréquentation que le prix du billet.
+
+### Test 18 : Agriculture & Rendement Céréalier
+* **Fichier de test** : `examples/agriculture_rendement_2025.csv`
+* **Configuration de simulation** : Target = `Rendement_Quintal_Ha`, Feature = `Pluviometrie_Mm`, Change % = `+15%`
+* **Résultat obtenu** : Baseline = 56,80 q/ha, Simulation = 56,90 q/ha (+0,18%), $R^2 = 0,0003$ (Effondrement total).
+* **Analyse & Critique Métier** :
+  - **Effondrement complet du modèle ($R^2 = 0,0003$)** : La pluviométrie n'explique que 0,03% du rendement selon le modèle. Résultat en réalité attendu par un agronome.
+  - **Relation en courbe de Gauss (Optimum de pluviométrie)** : Trop peu de pluie (150 mm → sécheresse) ET trop de pluie (620 mm → noyade des cultures) réduisent le rendement. Le meilleur rendement se situe entre 280 et 400 mm. Une droite linéaire est aveugle à cet optimum parabolicique.
+  - **Le Type de sol est ignoré** : Le Limon produit 72 q/ha tandis que le Sable produit 40 q/ha à pluviométrie équivalente. La colonne texte `Type_Sol` est la variable déterminante non prise en compte.
 
 ---
 

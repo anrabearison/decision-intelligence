@@ -1,0 +1,16 @@
+Semaine;Saison;Temperature_Moy_C;Vacances_Scolaires;Prix_Billet_Euros;Visiteurs_Jour;Recettes_Boutique_Euros
+2025-01;Hiver;3;Non;12;420;1890
+2025-02;Hiver;2;Non;12;380;1710
+2025-03;Hiver;5;Oui;12;850;3825
+2025-04;Hiver;6;Non;12;440;1980
+2025-05;Printemps;12;Non;14;680;3060
+2025-06;Printemps;15;Non;14;720;3240
+2025-07;Printemps;18;Oui;14;1400;6300
+2025-08;Printemps;20;Non;14;780;3510
+2025-09;Été;26;Non;16;1100;4950
+2025-10;Été;28;Non;16;1250;5625
+2025-11;Été;27;Oui;16;2800;12600
+2025-12;Été;25;Non;16;1300;5850
+2025-13;Automne;18;Non;14;700;3150
+2025-14;Automne;14;Non;14;650;2925
+2025-15;Automne;10;Oui;14;1100;4950

@@ -1,0 +1,16 @@
+Parcelle_ID;Type_Sol;Pluviometrie_Mm;Engrais_Kg_Ha;Temperature_Moy_C;Rendement_Quintal_Ha
+PAR-01;Limon;320;120;14,5;72
+PAR-02;Limon;280;100;15,2;68
+PAR-03;Argile;450;150;13,8;58
+PAR-04;Sable;180;80;16,5;42
+PAR-05;Limon;390;130;14,0;75
+PAR-06;Argile;520;160;13,0;50
+PAR-07;Sable;150;60;17,0;35
+PAR-08;Limon;310;110;15,0;70
+PAR-09;Argile;620;180;12,5;38
+PAR-10;Limon;260;95;15,5;65
+PAR-11;Sable;220;90;16,0;48
+PAR-12;Limon;400;135;13,5;74
+PAR-13;Argile;580;170;12,8;44
+PAR-14;Limon;340;115;14,8;73
+PAR-15;Sable;190;75;16,8;40
