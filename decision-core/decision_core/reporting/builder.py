@@ -212,6 +212,17 @@ def generate_report(
     from decision_core.stats.derived_columns import detect_derived_relationships
     derived_relationships = detect_derived_relationships(df, numeric_cols)
     _build_correlation_warnings(df, numeric_cols, corr_pairs, derived_relationships, warnings)
+    
+    # Détection des facteurs confondants pour les corrélations principales
+    from decision_core.stats.regression import detect_confounders
+    for corr in top_correlations[:3]:  # Vérifier les 3 premières corrélations
+        confounders = detect_confounders(df, corr['column_a'], corr['column_b'])
+        if confounders:
+            warnings.append(
+                f"Corrélation potentielle spurieuse entre {corr['column_a']} et {corr['column_b']} : "
+                f"facteur(s) confondant(s) détecté(s) : {', '.join(confounders)}. "
+                f"Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe."
+            )
 
     # — Simulation (optionnelle) —
     sim_dict: dict | None = None

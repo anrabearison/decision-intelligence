@@ -18,6 +18,10 @@ def render_text_summary(report: ReportResult) -> str:
     ds = report.dataset_summary
     lines.append(f"📊 Résumé du dataset : {ds.n_rows} lignes, {ds.n_columns} colonnes.")
 
+    # Disclaimer systématique sur la causalité
+    lines.append("⚠️ AVERTISSEMENT : Corrélation ≠ Causalité. Les résultats présentés "
+                 "ne doivent pas être interprétés comme des relations de cause à effet.")
+
     if report.validation["duplicates_count"] > 0:
         lines.append(f"⚠️ {report.validation['duplicates_count']} doublon(s) détecté(s).")
 
@@ -25,7 +29,7 @@ def render_text_summary(report: ReportResult) -> str:
         top = report.top_correlations[0]
         lines.append(
             f"🔎 Corrélation la plus forte : {top['column_a']} ↔ {top['column_b']} "
-            f"({top['value']:.2f}). Rappel : corrélation n'implique pas causalité."
+            f"({top['value']:.2f})."
         )
 
     if report.simulation is not None:
@@ -82,6 +86,9 @@ def render_html(report: ReportResult) -> str:
 <body>
 <h1>Rapport d'analyse</h1>
 <p>{ds.n_rows} lignes, {ds.n_columns} colonnes.</p>
+<div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 10px; margin: 10px 0;">
+<strong>⚠️ AVERTISSEMENT IMPORTANT :</strong> Corrélation ≠ Causalité. Les résultats présentés ne doivent pas être interprétés comme des relations de cause à effet.
+</div>
 <h2>Synthèse</h2>
 <p>{text_summary}</p>
 <h2>Corrélations principales</h2>

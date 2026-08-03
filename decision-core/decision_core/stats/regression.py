@@ -8,11 +8,16 @@ Robustesse (voir README, section limites) : les valeurs manquantes,
 colonnes à variance nulle et échantillons trop petits sont détectés
 explicitement avant tout calcul, via validate_regression_inputs -
 jamais laissés fuiter en NaN silencieux ou en exception brute de scipy/numpy.
+
+Phase 1b - Régression logistique : détection automatique des cibles binaires
+et basculement sur régression logistique pour éviter les erreurs de modélisation
+sur des événements binaires (Churn, Panne, Guéri, etc.).
 """
 import numpy as np
 import pandas as pd
 from scipy import stats
-from decision_core.models import SimpleRegressionResult, MultivariateRegressionResult
+from scipy.optimize import minimize_scalar
+from decision_core.models import SimpleRegressionResult, MultivariateRegressionResult, LogisticRegressionResult
 
 MIN_ROWS_FOR_REGRESSION = 3
 
@@ -32,6 +37,152 @@ class InsufficientDataError(ValueError):
     produirait un résultat dégénéré (NaN ou division par zéro) plutôt
     qu'une exception claire - on préfère échouer explicitement."""
     pass
+
+
+def is_binary_target(series: pd.Series) -> bool:
+    """Détecte si une série est une cible binaire (exactement 2 valeurs uniques).
+
+    Args:
+        series: Série pandas à analyser.
+
+    Returns:
+        True si la série a exactement 2 valeurs uniques, False sinon.
+    """
+    unique_values = series.dropna().nunique()
+    return unique_values == 2
+
+
+def detect_confounders(df: pd.DataFrame, target: str, feature: str, threshold: float = 0.3) -> list[str]:
+    """Détecte les facteurs confondants potentiels pour une corrélation feature-target.
+    
+    Un facteur confondant est une variable catégorielle qui est corrélée
+    simultanément avec la feature et la target, suggérant que la corrélation
+    observée pourrait être spurieuse.
+    
+    Args:
+        df: DataFrame pandas contenant les données.
+        target: Nom de la colonne cible.
+        feature: Nom de la colonne feature.
+        threshold: Seuil de corrélation pour considérer une variable comme confondant.
+    
+    Returns:
+        Liste des noms de colonnes catégorielles potentiellement confondantes.
+    """
+    confounders = []
+    
+    # Parcourir toutes les colonnes catégorielles (texte)
+    for col in df.columns:
+        if col == target or col == feature:
+            continue
+        
+        # Vérifier si la colonne est catégorielle (texte ou peu de valeurs uniques)
+        if pd.api.types.is_string_dtype(df[col]) or df[col].nunique() <= 10:
+            # Calculer la corrélation point-bisériale avec la target
+            # Pour les variables catégorielles, on utilise la corrélation de Pearson
+            # après encodage one-hot (première modalité)
+            try:
+                # Encodage simple : convertir en numérique via factorize
+                encoded = pd.factorize(df[col])[0]
+                if pd.api.types.is_numeric_dtype(df[target]):
+                    corr_target = abs(df[target].corr(pd.Series(encoded)))
+                else:
+                    corr_target = 0
+                
+                if pd.api.types.is_numeric_dtype(df[feature]):
+                    corr_feature = abs(df[feature].corr(pd.Series(encoded)))
+                else:
+                    corr_feature = 0
+                
+                # Si la variable est corrélée avec les deux, c'est un facteur confondant potentiel
+                if corr_target >= threshold and corr_feature >= threshold:
+                    confounders.append(col)
+            except Exception:
+                # Ignorer les erreurs de calcul de corrélation
+                pass
+    
+    return confounders
+
+
+def fit_logistic_regression(df: pd.DataFrame, target: str, feature: str) -> LogisticRegressionResult:
+    """Ajuste une régression logistique pour une cible binaire.
+
+    Args:
+        df: DataFrame pandas contenant les données.
+        target: Nom de la colonne cible (variable dépendante binaire).
+        feature: Nom de la colonne feature (variable indépendante).
+
+    Returns:
+        LogisticRegressionResult contenant coefficient, intercept, r_squared, feature, target.
+
+    Raises:
+        TypeError: Si les colonnes ne sont pas numériques.
+        InsufficientDataError: Si pas assez de données ou variance nulle.
+    """
+    if not pd.api.types.is_numeric_dtype(df[feature]):
+        raise TypeError(f"La colonne '{feature}' doit être numérique pour une régression.")
+    if not pd.api.types.is_numeric_dtype(df[target]):
+        raise TypeError(f"La colonne '{target}' doit être numérique pour une régression.")
+
+    clean = validate_regression_inputs(df, [feature, target])
+
+    x = clean[feature].values
+    y = clean[target].values
+
+    # Régression logistique via maximum likelihood
+    def negative_log_likelihood(params):
+        """Fonction de coût pour la régression logistique."""
+        intercept, coef = params
+        # Éviter l'overflow dans exp
+        z = intercept + coef * x
+        z = np.clip(z, -500, 500)
+        p = 1 / (1 + np.exp(-z))
+        # Éviter log(0)
+        p = np.clip(p, 1e-15, 1 - 1e-15)
+        ll = y * np.log(p) + (1 - y) * np.log(1 - p)
+        return -np.sum(ll)
+
+    # Optimisation pour trouver les paramètres optimaux
+    result = minimize_scalar(
+        lambda coef: negative_log_likelihood([0, coef]),
+        bounds=(-10, 10),
+        method='bounded'
+    )
+    
+    # Optimisation de l'intercept avec le coefficient optimal
+    coef_opt = result.x
+    result_intercept = minimize_scalar(
+        lambda intercept: negative_log_likelihood([intercept, coef_opt]),
+        bounds=(-10, 10),
+        method='bounded'
+    )
+    
+    intercept_opt = result_intercept.x
+
+    # Calcul du pseudo-R² (McFadden)
+    z = intercept_opt + coef_opt * x
+    z = np.clip(z, -500, 500)
+    p = 1 / (1 + np.exp(-z))
+    
+    # Log-vraisemblance du modèle
+    ll_model = y * np.log(p) + (1 - y) * np.log(1 - p)
+    ll_model = np.sum(ll_model)
+    
+    # Log-vraisemblance du modèle nul (intercept seulement)
+    p_null = np.mean(y)
+    ll_null = y * np.log(p_null) + (1 - y) * np.log(1 - p_null)
+    ll_null = np.sum(ll_null)
+    
+    # Pseudo-R² de McFadden
+    r_squared = 1 - (ll_model / ll_null)
+
+    return LogisticRegressionResult(
+        target=target,
+        feature=feature,
+        r_squared=float(r_squared),
+        intercept=float(intercept_opt),
+        coefficient=float(coef_opt),
+        model_type="logistic",
+    )
 
 
 def validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame:
@@ -64,8 +215,10 @@ def validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     return subset
 
 
-def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> SimpleRegressionResult:
-    """Ajuste une régression linéaire simple entre deux variables.
+def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> SimpleRegressionResult | LogisticRegressionResult:
+    """Ajuste une régression simple entre deux variables.
+    
+    Détecte automatiquement si la cible est binaire et bascule sur régression logistique.
 
     Args:
         df: DataFrame pandas contenant les données.
@@ -73,7 +226,7 @@ def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> Simple
         feature: Nom de la colonne feature (variable indépendante).
 
     Returns:
-        SimpleRegressionResult contenant slope, intercept, r_squared, feature, target.
+        SimpleRegressionResult ou LogisticRegressionResult selon le type de cible.
         Utilisez .to_dict() pour obtenir un dictionnaire plat si nécessaire.
 
     Raises:
@@ -84,6 +237,10 @@ def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> Simple
         raise TypeError(f"La colonne '{feature}' doit être numérique pour une régression.")
     if not pd.api.types.is_numeric_dtype(df[target]):
         raise TypeError(f"La colonne '{target}' doit être numérique pour une régression.")
+
+    # Détection automatique de cible binaire
+    if is_binary_target(df[target]):
+        return fit_logistic_regression(df, target, feature)
 
     clean = validate_regression_inputs(df, [feature, target])
 

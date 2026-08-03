@@ -7,6 +7,9 @@ decision_core.stats pour préserver la rétrocompatibilité des imports.
 from decision_core.stats.regression import (
     fit_simple_regression,
     fit_multivariate_regression,
+    fit_logistic_regression,
+    is_binary_target,
+    detect_confounders,
     validate_regression_inputs,
     InsufficientDataError,
     MIN_ROWS_FOR_REGRESSION,
@@ -15,6 +18,9 @@ from decision_core.stats.regression import (
 __all__ = [
     "fit_simple_regression",
     "fit_multivariate_regression",
+    "fit_logistic_regression",
+    "is_binary_target",
+    "detect_confounders",
     "validate_regression_inputs",
     "InsufficientDataError",
     "MIN_ROWS_FOR_REGRESSION",

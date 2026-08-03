@@ -1,28 +1,30 @@
 """
-Modèles de données typés pour decision-core.
+Package de modèles pour decision-core.
 
-Ce package regroupe les dataclasses de configuration et de résultats
-pour la simulation, la régression, la détection d'anomalies et les rapports.
+Ce package contient les dataclasses pour les configurations et résultats.
 """
 from decision_core.models.config import SimulationConfig, AnalysisConfig
-from decision_core.models.regression import SimpleRegressionResult, MultivariateRegressionResult
+from decision_core.models.regression import (
+    SimpleRegressionResult,
+    LogisticRegressionResult,
+    MultivariateRegressionResult,
+)
 from decision_core.models.simulation import SimulationResult
 from decision_core.models.anomaly import AnomalyDetectionResult
 from decision_core.models.report import DatasetSummary, ExploitabilityScore, ReportResult
 
 __all__ = [
-    # Configuration
+    # Config
     "SimulationConfig",
     "AnalysisConfig",
     # Regression results
     "SimpleRegressionResult",
+    "LogisticRegressionResult",
     "MultivariateRegressionResult",
-    # Simulation result
+    # Other results
     "SimulationResult",
-    # Anomaly detection result
     "AnomalyDetectionResult",
-    # Report models
+    "ReportResult",
     "DatasetSummary",
     "ExploitabilityScore",
-    "ReportResult",
 ]

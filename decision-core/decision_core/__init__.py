@@ -19,6 +19,9 @@ from decision_core.quality.anomaly_detection import detect_anomalies_iqr, MIN_RE
 from decision_core.stats.regression import (
     fit_simple_regression,
     fit_multivariate_regression,
+    fit_logistic_regression,
+    is_binary_target,
+    detect_confounders,
     InsufficientDataError,
 )
 from decision_core.stats.influence_detection import compute_cooks_distance, detect_influential_points
@@ -58,6 +61,9 @@ __all__ = [
     # Regression
     "fit_simple_regression",
     "fit_multivariate_regression",
+    "fit_logistic_regression",
+    "is_binary_target",
+    "detect_confounders",
     "InsufficientDataError",
     # Influence detection
     "compute_cooks_distance",
