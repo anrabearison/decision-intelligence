@@ -16,7 +16,7 @@ sur des événements binaires (Churn, Panne, Guéri, etc.).
 import numpy as np
 import pandas as pd
 from scipy import stats
-from scipy.optimize import minimize_scalar
+from scipy.optimize import minimize
 from decision_core.models import SimpleRegressionResult, MultivariateRegressionResult, LogisticRegressionResult
 
 MIN_ROWS_FOR_REGRESSION = 3
@@ -83,13 +83,16 @@ def detect_confounders(df: pd.DataFrame, target: str, feature: str, threshold: f
             try:
                 # Encodage simple : convertir en numérique via factorize
                 encoded = pd.factorize(df[col])[0]
+                # Ajouter explicitement l'index pour éviter la perte d'alignement
+                encoded_series = pd.Series(encoded, index=df.index)
+                
                 if pd.api.types.is_numeric_dtype(df[target]):
-                    corr_target = abs(df[target].corr(pd.Series(encoded)))
+                    corr_target = abs(df[target].corr(encoded_series))
                 else:
                     corr_target = 0
                 
                 if pd.api.types.is_numeric_dtype(df[feature]):
-                    corr_feature = abs(df[feature].corr(pd.Series(encoded)))
+                    corr_feature = abs(df[feature].corr(encoded_series))
                 else:
                     corr_feature = 0
                 
@@ -128,7 +131,7 @@ def fit_logistic_regression(df: pd.DataFrame, target: str, feature: str) -> Logi
     x = clean[feature].values
     y = clean[target].values
 
-    # Régression logistique via maximum likelihood
+    # Régression logistique via maximum likelihood avec optimisation multivariée
     def negative_log_likelihood(params):
         """Fonction de coût pour la régression logistique."""
         intercept, coef = params
@@ -141,22 +144,15 @@ def fit_logistic_regression(df: pd.DataFrame, target: str, feature: str) -> Logi
         ll = y * np.log(p) + (1 - y) * np.log(1 - p)
         return -np.sum(ll)
 
-    # Optimisation pour trouver les paramètres optimaux
-    result = minimize_scalar(
-        lambda coef: negative_log_likelihood([0, coef]),
-        bounds=(-10, 10),
-        method='bounded'
+    # Optimisation multivariée simultanée pour intercept et coefficient
+    result = minimize(
+        negative_log_likelihood,
+        x0=[0.0, 0.0],  # Initialisation : intercept et coefficient
+        method='L-BFGS-B',
+        bounds=[(-10, 10), (-10, 10)]  # Bornes pour intercept et coefficient
     )
     
-    # Optimisation de l'intercept avec le coefficient optimal
-    coef_opt = result.x
-    result_intercept = minimize_scalar(
-        lambda intercept: negative_log_likelihood([intercept, coef_opt]),
-        bounds=(-10, 10),
-        method='bounded'
-    )
-    
-    intercept_opt = result_intercept.x
+    intercept_opt, coef_opt = result.x
 
     # Calcul du pseudo-R² (McFadden)
     z = intercept_opt + coef_opt * x

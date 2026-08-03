@@ -10,6 +10,8 @@ import pytest
 from decision_core.regression import (
     fit_simple_regression,
     fit_multivariate_regression,
+    fit_logistic_regression,
+    is_binary_target,
     InsufficientDataError,
 )
 from decision_core.simulation import simulate_scenario
@@ -182,3 +184,46 @@ class TestRegressionHandlesTooFewRows:
         df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "Y": [5, 6]})
         with pytest.raises(InsufficientDataError):
             fit_multivariate_regression(df, target="Y", features=["A", "B"])
+
+
+class TestLogisticRegressionBinaryTarget:
+    def test_fit_logistic_regression_binary_target(self):
+        """Test que la régression logistique fonctionne sur une cible binaire."""
+        df = pd.DataFrame({
+            "X": [1, 2, 3, 4, 5, 6, 7, 8],
+            "Y": [0, 0, 0, 1, 1, 1, 1, 1]  # Cible binaire
+        })
+        model = fit_logistic_regression(df, target="Y", feature="X")
+        
+        # Vérifier que le modèle type est bien "logistic"
+        assert model.model_type == "logistic"
+        
+        # Vérifier que le pseudo R² est calculé et est entre 0 et 1
+        assert 0 <= model.r_squared <= 1
+        
+        # Vérifier que le coefficient et l'intercept sont des nombres
+        assert isinstance(model.coefficient, float)
+        assert isinstance(model.intercept, float)
+        
+        # Vérifier que le coefficient est positif (plus X augmente, plus Y tend vers 1)
+        assert model.coefficient > 0
+
+    def test_is_binary_target_detects_binary_columns(self):
+        """Test que la détection de cible binaire fonctionne."""
+        df = pd.DataFrame({
+            "binary": [0, 1, 0, 1, 0],
+            "non_binary": [1, 2, 3, 4, 5],
+        })
+        assert is_binary_target(df["binary"]) is True
+        assert is_binary_target(df["non_binary"]) is False
+
+    def test_fit_simple_regression_auto_switches_to_logistic(self):
+        """Test que fit_simple_regression bascule automatiquement sur logistique pour cible binaire."""
+        df = pd.DataFrame({
+            "X": [1, 2, 3, 4, 5, 6],
+            "Y": [0, 0, 0, 1, 1, 1]
+        })
+        model = fit_simple_regression(df, target="Y", feature="X")
+        
+        # Vérifier que le modèle retourné est bien LogisticRegressionResult
+        assert model.model_type == "logistic"
