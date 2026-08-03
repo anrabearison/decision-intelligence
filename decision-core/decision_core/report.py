@@ -27,8 +27,78 @@ from decision_core.derived_columns import detect_derived_relationships
 
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
 
-
 LOW_R_SQUARED_THRESHOLD = 0.3
+
+# R8 — Détection de colonnes temporelles pour le warning de saisonnalité.
+# Mots-clés cherchés dans les noms de colonnes (insensible à la casse).
+_TEMPORAL_KEYWORDS = [
+    "date", "semaine", "week", "mois", "month", "saison", "season",
+    "trimestre", "quarter", "annee", "year", "jour", "day", "periode",
+    "timestamp", "heure", "hour",
+]
+
+
+def _detect_temporal_columns(df: pd.DataFrame) -> list:
+    """Retourne la liste des noms de colonnes dont le nom suggère une
+    dimension temporelle (date, semaine, saison, etc.)."""
+    found = []
+    for col in df.columns:
+        col_lower = col.lower()
+        if any(kw in col_lower for kw in _TEMPORAL_KEYWORDS):
+            found.append(col)
+    return found
+
+
+def _compute_exploitability_score(
+    n_rows: int,
+    n_warnings: int,
+    n_anomaly_cols: int,
+    r_squared: float | None,
+) -> dict:
+    """R9 — Calcule un score synthétique d'exploitabilité du dataset.
+
+    Logique heuristique :
+    - Taille de l'échantillon (< 15 : critique, < 30 : faible, >= 30 : ok)
+    - Nombre de warnings générés
+    - R² de la simulation si disponible
+    - Présence de colonnes avec anomalies
+
+    Retourne un dict avec 'level' (green/orange/red) et 'summary' (texte).
+    """
+    score = 100
+
+    # Pénalité taille
+    if n_rows < 15:
+        score -= 50
+    elif n_rows < SMALL_SAMPLE_THRESHOLD:
+        score -= 25
+
+    # Pénalité warnings (chaque warning = -10, plafonné à -30)
+    score -= min(n_warnings * 10, 30)
+
+    # Pénalité anomalies détectées
+    score -= n_anomaly_cols * 5
+
+    # Pénalité R² faible sur la simulation
+    if r_squared is not None:
+        if r_squared < 0.1:
+            score -= 30
+        elif r_squared < LOW_R_SQUARED_THRESHOLD:
+            score -= 15
+
+    score = max(0, score)
+
+    if score >= 70:
+        level = "green"
+        summary = "Dataset exploitable — les résultats sont interprétables avec confiance."
+    elif score >= 40:
+        level = "orange"
+        summary = "Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier."
+    else:
+        level = "red"
+        summary = "Données insuffisantes ou trop limitées — les résultats sont indicatifs uniquement."
+
+    return {"level": level, "score": score, "summary": summary}
 
 
 def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> dict:
@@ -63,8 +133,13 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
     # échantillon jugé fiable sont incluses (évite un avertissement
     # trompeur sur un échantillon trop petit).
     anomalies = {}
+    # R7 : le multiplicateur IQR est configurable via simulation_config
+    # (clé optionnelle 'iqr_k'). Par défaut : 1.5 (comportement inchangé).
+    iqr_k = 1.5
+    if simulation_config is not None:
+        iqr_k = simulation_config.get("iqr_k", 1.5)
     for col in numeric_cols:
-        result = detect_anomalies_iqr(df[col])
+        result = detect_anomalies_iqr(df[col], k=iqr_k)
         if result["indices"] and result["reliable"]:
             anomalies[col] = result
     if anomalies:
@@ -140,6 +215,10 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
             target=simulation_config["target"],
             feature=simulation_config["feature"],
             change_pct=simulation_config["change_pct"],
+            # R2 : valeur de référence de la feature (optionnel)
+            baseline_feature_value=simulation_config.get("baseline_feature_value"),
+            # R4 : bornes physiques / institutionnelles (optionnel)
+            bounds=simulation_config.get("bounds"),
         )
         report["simulation"] = simulation
 
@@ -182,6 +261,37 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
                 f"seul point atypique. Vérifier ces valeurs avant de "
                 f"s'y fier."
             )
+
+    # R8 — Warning saisonnalité : si une colonne temporelle est détectée
+    # ET qu'il existe des corrélations fortes, alerter sur le risque
+    # d'inversion de causalité liée à la saisonnalité.
+    temporal_cols = _detect_temporal_columns(df)
+    if temporal_cols:
+        strong_corrs = [
+            p for p in corr_pairs
+            if abs(p["value"]) >= 0.6 and p.get("significant_after_correction")
+        ]
+        if strong_corrs:
+            temporal_names = ", ".join(f"'{c}'" for c in temporal_cols)
+            warnings.append(
+                f"Dimension temporelle détectée ({temporal_names}) : "
+                f"les corrélations fortes observées peuvent refléter des "
+                f"effets saisonniers plutôt que des relations causales "
+                f"directes. Une hausse de prix en été (haute saison) "
+                f"apparaît corrélée à la fréquentation, par exemple — "
+                f"sans que le prix en soit la cause. Croiser avec une "
+                f"analyse par période avant de tirer des conclusions."
+            )
+
+    # R9 — Score d'exploitabilité synthétique
+    sim_r_squared = report.get("simulation", {}).get("model_r_squared")
+    exploitability = _compute_exploitability_score(
+        n_rows=n_rows,
+        n_warnings=len(warnings),
+        n_anomaly_cols=len(anomalies),
+        r_squared=sim_r_squared,
+    )
+    report["exploitability"] = exploitability
 
     return report
 
