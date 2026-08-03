@@ -57,8 +57,9 @@ class TestDetectsBivariateInfluentialPoint:
         df = _linear_dataset_with_bivariate_trap()
         iqr_x = detect_anomalies_iqr(df["X"])
         iqr_y = detect_anomalies_iqr(df["Y"])
-        assert 29 not in iqr_x["indices"]
-        assert 29 not in iqr_y["indices"]
+        assert 29 not in iqr_x.indices
+        assert 29 not in iqr_y.indices
+
 
 
 class TestDetectsExtremeUnivariateOutlier:

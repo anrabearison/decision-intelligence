@@ -24,8 +24,8 @@ Paramètres optionnels ajoutés (Phase 1a - refonte) :
     La baseline n'est pas affectée par les bornes. Lève ValueError si
     min_val > max_val.
 """
-import pandas as pd
 from decision_core.regression import fit_simple_regression
+from decision_core.models import SimulationConfig, SimulationResult
 
 # Si |baseline| est sous ce seuil relatif à l'écart-type de la cible,
 # un pourcentage de variation n'est pas jugé fiable.
@@ -39,7 +39,7 @@ def simulate_scenario(
     change_pct: float,
     baseline_feature_value: float | None = None,
     bounds: tuple[float, float] | None = None,
-) -> dict:
+) -> SimulationResult:
     """Simule l'impact d'une variation en % d'une feature sur la cible.
 
     Args:
@@ -48,72 +48,53 @@ def simulate_scenario(
         feature: Nom de la colonne feature sur laquelle appliquer la variation.
         change_pct: Variation relative (ex : 0.10 pour +10%).
         baseline_feature_value: Valeur de référence de la feature (optionnel).
-            Si fourni, remplace la moyenne historique comme point de départ.
-            Utile pour partir de la dernière valeur connue plutôt que de la
-            moyenne sur l'ensemble de l'historique.
-            Si 0.0, la feature simulée reste à 0 quel que soit change_pct.
-        bounds: Tuple (min_val, max_val) pour borner le résultat simulé
-            (optionnel). Exemple : (0, 20) pour une note sur 20. Le résultat
-            simulé est clippé à ces bornes ; la baseline n'est pas affectée.
-            Lève ValueError si min_val > max_val.
+        bounds: Tuple (min_val, max_val) pour borner le résultat simulé (optionnel).
 
     Returns:
-        Dict contenant : baseline, simulated, change_pct, change_pct_reliable,
-        model_r_squared, feature, target. Si bounds est fourni, ajoute
-        bounds_applied (bool).
-
-    Raises:
-        TypeError: si feature ou target ne sont pas numériques.
-        InsufficientDataError: si trop peu de données valides.
-        ValueError: si bounds est fourni avec min_val > max_val.
+        SimulationResult encapsulant les résultats de la simulation.
     """
-    model = fit_simple_regression(df, target=target, feature=feature)
-
-    # R2 : utiliser la valeur fournie si disponible, sinon la moyenne historique
-    ref_feature_value = (
-        baseline_feature_value
-        if baseline_feature_value is not None
-        else df[feature].mean()
+    config = SimulationConfig(
+        target=target,
+        feature=feature,
+        change_pct=change_pct,
+        baseline_feature_value=baseline_feature_value,
+        bounds=bounds,
     )
 
-    baseline = model["intercept"] + model["slope"] * ref_feature_value
-    simulated_feature_value = ref_feature_value * (1 + change_pct)
-    simulated = model["intercept"] + model["slope"] * simulated_feature_value
+    model = fit_simple_regression(df, target=config.target, feature=config.feature)
 
-    # R4 : clipper le résultat simulé aux bornes physiques/institutionnelles.
-    # bounds_applied est calculé AVANT le clipping pour éviter les erreurs
-    # d'arrondi flottant : comparer simulated (non clippé) aux bornes est plus
-    # fiable que comparer deux flottants potentiellement affectés par des
-    # différences d'epsilon après clipping.
+    ref_feature_value = (
+        config.baseline_feature_value
+        if config.baseline_feature_value is not None
+        else df[config.feature].mean()
+    )
+
+    baseline = model.intercept + model.slope * ref_feature_value
+    simulated_feature_value = ref_feature_value * (1 + config.change_pct)
+    simulated = model.intercept + model.slope * simulated_feature_value
+
     bounds_applied: bool | None = None
-    if bounds is not None:
-        min_val, max_val = float(bounds[0]), float(bounds[1])
-        if min_val > max_val:
-            raise ValueError(
-                f"bounds invalides : min_val ({min_val}) > max_val ({max_val}). "
-                f"Le premier élément doit être la borne inférieure (min)."
-            )
+    if config.bounds is not None:
+        min_val, max_val = float(config.bounds[0]), float(config.bounds[1])
         bounds_applied = not (min_val <= simulated <= max_val)
         simulated = max(min_val, min(max_val, simulated))
 
-    target_std = df[target].std()
+    target_std = df[config.target].std()
     is_reliable = target_std == 0 or abs(baseline) >= NEAR_ZERO_BASELINE_RATIO * target_std
 
     change_pct_result = (
         (simulated - baseline) / baseline * 100 if is_reliable else None
     )
 
-    result = {
-        "baseline": float(baseline),
-        "simulated": float(simulated),
-        "change_pct": float(change_pct_result) if change_pct_result is not None else None,
-        "change_pct_reliable": bool(is_reliable),
-        "model_r_squared": model["r_squared"],
-        "feature": feature,
-        "target": target,
-    }
+    return SimulationResult(
+        baseline=float(baseline),
+        simulated=float(simulated),
+        change_pct=float(change_pct_result) if change_pct_result is not None else None,
+        change_pct_reliable=bool(is_reliable),
+        model_r_squared=model.r_squared,
+        feature=config.feature,
+        target=config.target,
+        bounds_applied=bounds_applied,
+    )
 
-    if bounds is not None:
-        result["bounds_applied"] = bounds_applied
 
-    return result

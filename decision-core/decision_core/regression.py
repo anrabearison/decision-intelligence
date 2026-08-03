@@ -12,6 +12,7 @@ jamais laissés fuiter en NaN silencieux ou en exception brute de scipy/numpy.
 import numpy as np
 import pandas as pd
 from scipy import stats
+from decision_core.models import RegressionResult
 
 MIN_ROWS_FOR_REGRESSION = 3
 
@@ -63,7 +64,7 @@ def _validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame
     return subset
 
 
-def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> dict:
+def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> RegressionResult:
     if not pd.api.types.is_numeric_dtype(df[feature]):
         raise TypeError(f"La colonne '{feature}' doit être numérique pour une régression.")
     if not pd.api.types.is_numeric_dtype(df[target]):
@@ -75,16 +76,16 @@ def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> dict:
     y = clean[target].values
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
 
-    return {
-        "slope": float(slope),
-        "intercept": float(intercept),
-        "r_squared": float(r_value ** 2),
-        "feature": feature,
-        "target": target,
-    }
+    return RegressionResult(
+        target=target,
+        r_squared=float(r_value ** 2),
+        intercept=float(intercept),
+        slope=float(slope),
+        feature=feature,
+    )
 
 
-def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -> dict:
+def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -> RegressionResult:
     for f in features + [target]:
         if not pd.api.types.is_numeric_dtype(df[f]):
             raise TypeError(f"La colonne '{f}' doit être numérique pour une régression.")
@@ -104,29 +105,16 @@ def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     r_squared = 1 - ss_res / ss_tot
 
-    # Le nombre de conditionnement est sensible à l'échelle des variables,
-    # pas seulement à leur colinéarité réelle - deux features indépendantes
-    # mais d'échelles très différentes peuvent donner un conditionnement
-    # élevé sans aucune vraie colinéarité (trouvé en écrivant les tests :
-    # des features indépendantes donnaient ~1900, pas < 30 comme attendu).
-    # Standardisation (centrage-réduction) avant calcul pour isoler la
-    # vraie colinéarité des simples différences d'unités/échelles.
-    # ddof=1 explicite : par cohérence avec pandas.std() (utilisé partout
-    # ailleurs dans le codebase, ex: profiling.py, simulation.py), qui
-    # calcule l'écart-type d'échantillon par défaut - contrairement à
-    # numpy.std() qui utilise ddof=0 (population) par défaut. Sans impact
-    # sur le résultat ici (le nombre de conditionnement est invariant à
-    # une mise à l'échelle uniforme, vérifié empiriquement), mais évite
-    # une incohérence de style qui pourrait dérouter un futur lecteur.
     X_standardized = (X - X.mean(axis=0)) / X.std(axis=0, ddof=1)
     X_standardized_with_intercept = np.column_stack([np.ones(len(X)), X_standardized])
     condition_number = float(np.linalg.cond(X_standardized_with_intercept))
 
-    return {
-        "intercept": intercept,
-        "coefficients": coefficients,
-        "r_squared": float(r_squared),
-        "target": target,
-        "condition_number": condition_number,
-        "multicollinearity_warning": condition_number > CONDITION_NUMBER_WARNING_THRESHOLD,
-    }
+    return RegressionResult(
+        target=target,
+        r_squared=float(r_squared),
+        intercept=intercept,
+        coefficients=coefficients,
+        condition_number=condition_number,
+        multicollinearity_warning=condition_number > CONDITION_NUMBER_WARNING_THRESHOLD,
+    )
+

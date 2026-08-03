@@ -9,11 +9,42 @@ import pytest
 
 from decision_core.simulation import simulate_scenario
 from decision_core.anomaly_detection import detect_anomalies_iqr
+from decision_core.models import SimulationConfig, AnalysisConfig
+
 from decision_core.report import (
     generate_report,
     _detect_temporal_columns,
     _compute_exploitability_score,
 )
+
+
+# ---------------------------------------------------------------------------
+# Tests Dataclasses de Configuration (POO)
+# ---------------------------------------------------------------------------
+
+class TestDataclassesConfig:
+    def test_simulation_config_valid_bounds(self):
+        """SimulationConfig doit s'instancier correctement avec des bornes valides."""
+        config = SimulationConfig(target="Y", feature="X", change_pct=0.10, bounds=(0.0, 100.0))
+        assert config.bounds == (0.0, 100.0)
+
+    def test_simulation_config_invalid_bounds_raises_error(self):
+        """SimulationConfig doit lever ValueError si min_val > max_val."""
+        with pytest.raises(ValueError, match="bounds invalides"):
+            SimulationConfig(target="Y", feature="X", change_pct=0.10, bounds=(100.0, 0.0))
+
+    def test_analysis_config_valid_iqr_k(self):
+        """AnalysisConfig doit s'instancier avec son paramètre iqr_k par défaut (1.5)."""
+        config = AnalysisConfig()
+        assert config.iqr_k == 1.5
+
+    def test_analysis_config_invalid_iqr_k_raises_error(self):
+        """AnalysisConfig doit lever ValueError si iqr_k <= 0."""
+        with pytest.raises(ValueError, match="iqr_k doit être strictement supérieur à 0"):
+            AnalysisConfig(iqr_k=0.0)
+        with pytest.raises(ValueError, match="iqr_k doit être strictement supérieur à 0"):
+            AnalysisConfig(iqr_k=-1.5)
+
 
 
 # ---------------------------------------------------------------------------
@@ -55,9 +86,9 @@ class TestBaselineConfigurable:
         from decision_core.regression import fit_simple_regression
         df = _make_linear_df()
         model = fit_simple_regression(df, "Target", "Feature")
-        expected_baseline = model["intercept"] + model["slope"] * float(df["Feature"].mean())
+        expected_baseline = model.intercept + model.slope * float(df["Feature"].mean())
         result = simulate_scenario(df, "Target", "Feature", 0.10)
-        assert result["baseline"] == pytest.approx(expected_baseline, rel=1e-9)
+        assert result.baseline == pytest.approx(expected_baseline, rel=1e-9)
 
     def test_custom_baseline_overrides_mean(self):
         """Avec baseline_feature_value, la valeur fournie remplace la moyenne.
@@ -68,13 +99,13 @@ class TestBaselineConfigurable:
         # Valeur fixée volontairement éloignée de la moyenne (≈55) : Feature ∈ [10, 100]
         custom_value = 10.0
         model = fit_simple_regression(df, "Target", "Feature")
-        expected_custom_baseline = model["intercept"] + model["slope"] * custom_value
-        expected_mean_baseline = model["intercept"] + model["slope"] * float(df["Feature"].mean())
+        expected_custom_baseline = model.intercept + model.slope * custom_value
+        expected_mean_baseline = model.intercept + model.slope * float(df["Feature"].mean())
 
         result = simulate_scenario(df, "Target", "Feature", 0.10, baseline_feature_value=custom_value)
 
-        assert result["baseline"] == pytest.approx(expected_custom_baseline, rel=1e-9)
-        assert result["baseline"] != pytest.approx(expected_mean_baseline, rel=1e-3)
+        assert result.baseline == pytest.approx(expected_custom_baseline, rel=1e-9)
+        assert result.baseline != pytest.approx(expected_mean_baseline, rel=1e-3)
 
     def test_custom_baseline_at_zero_is_accepted(self):
         """Une baseline_feature_value de 0.0 est acceptée sans exception.
@@ -83,10 +114,10 @@ class TestBaselineConfigurable:
         result = simulate_scenario(
             df, "Target", "Feature", 0.10, baseline_feature_value=0.0
         )
-        assert "baseline" in result
-        assert result["feature"] == "Feature"
+        assert result.baseline is not None
+        assert result.feature == "Feature"
         # simulated_feature = 0.0 * (1 + 0.10) = 0.0 → égal à la baseline
-        assert result["simulated"] == pytest.approx(result["baseline"], rel=1e-9)
+        assert result.simulated == pytest.approx(result.baseline, rel=1e-9)
 
     def test_simulation_config_dict_supports_baseline(self):
         """generate_report doit passer baseline_feature_value depuis simulation_config."""
@@ -118,7 +149,7 @@ class TestBornesSimulation:
         result = simulate_scenario(
             df, "Target", "Feature", 5.0, bounds=(0.0, 20.0)
         )
-        assert result["simulated"] <= 20.0
+        assert result.simulated <= 20.0
 
     def test_bounds_clip_simulated_below_min(self):
         """Un résultat simulé < min_val doit être clippé à min_val."""
@@ -126,7 +157,7 @@ class TestBornesSimulation:
         result = simulate_scenario(
             df, "Target", "Feature", -1.0, bounds=(0.0, 500.0)
         )
-        assert result["simulated"] >= 0.0
+        assert result.simulated >= 0.0
 
     def test_bounds_applied_flag_true_when_clipped(self):
         """bounds_applied doit être True quand le résultat a été clippé."""
@@ -134,7 +165,7 @@ class TestBornesSimulation:
         result = simulate_scenario(
             df, "Target", "Feature", 50.0, bounds=(0.0, 1.0)
         )
-        assert result.get("bounds_applied") is True
+        assert result.bounds_applied is True
 
     def test_bounds_applied_flag_false_when_not_clipped(self):
         """bounds_applied doit être False quand le résultat est dans les bornes."""
@@ -142,13 +173,13 @@ class TestBornesSimulation:
         result = simulate_scenario(
             df, "Target", "Feature", 0.001, bounds=(0.0, 99999.0)
         )
-        assert result.get("bounds_applied") is False
+        assert result.bounds_applied is False
 
     def test_no_bounds_key_absent_from_result(self):
-        """Sans bounds, la clé 'bounds_applied' ne doit pas apparaître."""
+        """Sans bounds, la clé 'bounds_applied' ne doit pas apparaître ou être None."""
         df = _make_linear_df()
         result = simulate_scenario(df, "Target", "Feature", 0.10)
-        assert "bounds_applied" not in result
+        assert result.bounds_applied is None
 
     def test_bounds_inverted_raises_value_error(self):
         """bounds=(max, min) avec min > max doit lever ValueError immédiatement.
@@ -185,14 +216,15 @@ class TestSeuilIQRConfigurable:
         series = pd.Series([1.0, 2.0, 2.0, 2.5, 3.0, 100.0])  # 100 est une anomalie
         result_default = detect_anomalies_iqr(series)
         result_k15 = detect_anomalies_iqr(series, k=1.5)
-        assert result_default["indices"] == result_k15["indices"]
+        assert result_default.indices == result_k15.indices
 
     def test_higher_k_fewer_anomalies(self):
         """Un k plus élevé doit produire moins d'anomalies (bornes plus larges)."""
         series = pd.Series([1.0] * 30 + [10.0])
         result_strict = detect_anomalies_iqr(series, k=1.5)
         result_lax = detect_anomalies_iqr(series, k=3.0)
-        assert len(result_lax["indices"]) <= len(result_strict["indices"])
+        assert len(result_lax.indices) <= len(result_strict.indices)
+
 
     def test_iqr_k_via_analysis_config(self):
         """generate_report doit lire iqr_k depuis analysis_config (et non

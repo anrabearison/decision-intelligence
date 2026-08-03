@@ -25,6 +25,9 @@ from decision_core.simulation import simulate_scenario
 from decision_core.influence_detection import detect_influential_points
 from decision_core.regression import _validate_regression_inputs
 from decision_core.derived_columns import detect_derived_relationships
+from decision_core.models import SimulationConfig, AnalysisConfig
+
+
 
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
 
@@ -122,25 +125,42 @@ def _compute_exploitability_score(
 
 def generate_report(
     df: pd.DataFrame,
-    simulation_config: dict | None = None,
-    analysis_config: dict | None = None,
+    simulation_config: SimulationConfig | dict | None = None,
+    analysis_config: AnalysisConfig | dict | None = None,
 ) -> dict:
     """Génère le rapport d'analyse complet du DataFrame.
 
     Args:
         df: DataFrame source (issu de import_file).
-        simulation_config: Configuration de simulation (optionnel).
-            Clés reconnues : 'target', 'feature', 'change_pct',
-            'baseline_feature_value', 'bounds'.
-        analysis_config: Configuration de l'analyse (optionnel).
-            Clés reconnues : 'iqr_k' (float, défaut 1.5 — multiplicateur IQR
-            pour la détection d'anomalies).
+        simulation_config: Configuration de simulation typée SimulationConfig
+            ou dict équivalent.
+        analysis_config: Configuration d'analyse typée AnalysisConfig
+            ou dict équivalent.
 
     Returns:
-        Dict structuré contenant dataset_summary, validation, profiling,
-        anomalies, top_correlations, warnings, exploitability, et
-        optionnellement simulation.
+        Dict structuré.
     """
+    # Rétrocompatibilité et application des règles POO de validation statique
+    import inspect
+    typed_analysis: AnalysisConfig
+    if isinstance(analysis_config, AnalysisConfig):
+        typed_analysis = analysis_config
+    elif isinstance(analysis_config, dict):
+        valid_keys = inspect.signature(AnalysisConfig).parameters.keys()
+        filtered_analysis = {k: v for k, v in analysis_config.items() if k in valid_keys}
+        typed_analysis = AnalysisConfig(**filtered_analysis)
+    else:
+        typed_analysis = AnalysisConfig()
+
+    typed_simulation: SimulationConfig | None = None
+    if isinstance(simulation_config, SimulationConfig):
+        typed_simulation = simulation_config
+    elif isinstance(simulation_config, dict):
+        valid_keys = inspect.signature(SimulationConfig).parameters.keys()
+        filtered_simulation = {k: v for k, v in simulation_config.items() if k in valid_keys}
+        typed_simulation = SimulationConfig(**filtered_simulation)
+
+
     warnings = []
     n_rows = len(df)
 
@@ -165,22 +185,12 @@ def generate_report(
             "(voir les limites de détection dans la documentation)."
         )
 
-    # Détection d'anomalies (IQR) par colonne numérique - trouvé en audit :
-    # ce module était construit et testé mais jamais appelé ici, alors que
-    # le texte d'avertissement ci-dessus prétend déjà qu'elle fait partie
-    # de l'analyse. Seules les colonnes avec anomalies détectées ET un
-    # échantillon jugé fiable sont incluses (évite un avertissement
-    # trompeur sur un échantillon trop petit).
+    # Détection d'anomalies (IQR) par colonne numérique
     anomalies = {}
-    # R7 : le multiplicateur IQR est configurable via analysis_config
-    # (clé optionnelle 'iqr_k'). Par défaut : 1.5 (comportement inchangé).
-    # Rationale : iqr_k contrôle la détection d'anomalies, pas la simulation
-    # — il appartient sémantiquement à analysis_config, pas à simulation_config.
-    iqr_k = float((analysis_config or {}).get("iqr_k", 1.5))
     for col in numeric_cols:
-        result = detect_anomalies_iqr(df[col], k=iqr_k)
-        if result["indices"] and result["reliable"]:
-            anomalies[col] = result
+        result = detect_anomalies_iqr(df[col], k=typed_analysis.iqr_k)
+        if result.indices and result.reliable:
+            anomalies[col] = result.to_dict()
     if anomalies:
         cols_with_anomalies = ", ".join(anomalies.keys())
         total_anomalies = sum(len(a["indices"]) for a in anomalies.values())
@@ -248,49 +258,48 @@ def generate_report(
         "warnings": warnings,
     }
 
-    if simulation_config is not None:
+    if typed_simulation is not None:
         simulation = simulate_scenario(
             df,
-            target=simulation_config["target"],
-            feature=simulation_config["feature"],
-            change_pct=simulation_config["change_pct"],
-            # R2 : valeur de référence de la feature (optionnel)
-            baseline_feature_value=simulation_config.get("baseline_feature_value"),
-            # R4 : bornes physiques / institutionnelles (optionnel)
-            bounds=simulation_config.get("bounds"),
+            target=typed_simulation.target,
+            feature=typed_simulation.feature,
+            change_pct=typed_simulation.change_pct,
+            baseline_feature_value=typed_simulation.baseline_feature_value,
+            bounds=typed_simulation.bounds,
         )
-        report["simulation"] = simulation
+        report["simulation"] = simulation.to_dict()
 
         # L'avertissement "échantillon petit" plus haut porte sur la taille
         # globale du dataset - insuffisant si les colonnes utilisées par
         # CETTE simulation ont beaucoup de valeurs manquantes (un dataset
         # de 40 lignes peut n'avoir que 5 valeurs valides sur X et Y).
         effective_sample = _validate_regression_inputs(
-            df, [simulation_config["feature"], simulation_config["target"]]
+            df, [typed_simulation.feature, typed_simulation.target]
         )
         effective_n = len(effective_sample)
         if effective_n < n_rows and effective_n < SMALL_SAMPLE_THRESHOLD:
             warnings.append(
                 f"Échantillon effectif réduit pour cette simulation : "
                 f"seulement {effective_n} lignes valides sur "
-                f"'{simulation_config['feature']}' et "
-                f"'{simulation_config['target']}' (sur {n_rows} au total), "
+                f"'{typed_simulation.feature}' et "
+                f"'{typed_simulation.target}' (sur {n_rows} au total), "
                 f"après retrait des valeurs manquantes - résultats "
                 f"indicatifs, pas robustes."
             )
 
-        if simulation["model_r_squared"] < LOW_R_SQUARED_THRESHOLD:
+        if simulation.model_r_squared < LOW_R_SQUARED_THRESHOLD:
             warnings.append(
-                f"R² faible ({simulation['model_r_squared']:.2f}) pour la "
-                f"simulation sur '{simulation['feature']}' : le modèle "
+                f"R² faible ({simulation.model_r_squared:.2f}) pour la "
+                f"simulation sur '{typed_simulation.feature}' : le modèle "
                 f"explique moins de {int(LOW_R_SQUARED_THRESHOLD*100)}% de "
-                f"la variance de '{simulation['target']}' - la projection "
+                f"la variance de '{typed_simulation.target}' - la projection "
                 f"est peu fiable, à interpréter avec beaucoup de prudence."
             )
 
         influence = detect_influential_points(
-            df, feature=simulation_config["feature"], target=simulation_config["target"]
+            df, feature=typed_simulation.feature, target=typed_simulation.target
         )
+
         if influence["indices"]:
             warnings.append(
                 f"Point(s) influent(s) détecté(s) (ligne(s) "

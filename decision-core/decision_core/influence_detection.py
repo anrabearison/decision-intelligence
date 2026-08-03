@@ -38,8 +38,9 @@ def compute_cooks_distance(df: pd.DataFrame, feature: str, target: str) -> np.nd
     y = clean[target].values.astype(float)
     n = len(x)
 
-    y_pred = model["intercept"] + model["slope"] * x
+    y_pred = model.intercept + model.slope * x
     residuals = y - y_pred
+
 
     p = 2  # nombre de paramètres estimés (pente + intercept)
     mse = np.sum(residuals ** 2) / (n - p)
