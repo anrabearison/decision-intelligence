@@ -211,15 +211,22 @@ def validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     return subset
 
 
-def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> SimpleRegressionResult | LogisticRegressionResult:
+def fit_simple_regression(
+    df: pd.DataFrame, 
+    target: str, 
+    feature: str,
+    encode_categorical: bool = False
+) -> SimpleRegressionResult | LogisticRegressionResult:
     """Ajuste une régression simple entre deux variables.
     
     Détecte automatiquement si la cible est binaire et bascule sur régression logistique.
+    Optionnellement encode les variables catégorielles en one-hot.
 
     Args:
         df: DataFrame pandas contenant les données.
         target: Nom de la colonne cible (variable dépendante).
         feature: Nom de la colonne feature (variable indépendante).
+        encode_categorical: Si True, encode les variables catégorielles en one-hot.
 
     Returns:
         SimpleRegressionResult ou LogisticRegressionResult selon le type de cible.
@@ -229,6 +236,12 @@ def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> Simple
         TypeError: Si les colonnes ne sont pas numériques.
         InsufficientDataError: Si pas assez de données ou variance nulle.
     """
+    from decision_core.stats.categorical import encode_categorical_features
+    
+    # Encodage optionnel des variables catégorielles
+    if encode_categorical:
+        df = encode_categorical_features(df)
+    
     if not pd.api.types.is_numeric_dtype(df[feature]):
         raise TypeError(f"La colonne '{feature}' doit être numérique pour une régression.")
     if not pd.api.types.is_numeric_dtype(df[target]):

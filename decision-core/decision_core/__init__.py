@@ -24,6 +24,11 @@ from decision_core.stats.regression import (
     detect_confounders,
     InsufficientDataError,
 )
+from decision_core.stats.categorical import (
+    encode_categorical_features,
+    detect_significant_subgroups,
+    generate_segmented_reports,
+)
 from decision_core.stats.influence_detection import compute_cooks_distance, detect_influential_points
 from decision_core.simulation import simulate_scenario
 from decision_core.reporting import generate_report, render_text_summary, render_html
@@ -65,6 +70,10 @@ __all__ = [
     "is_binary_target",
     "detect_confounders",
     "InsufficientDataError",
+    # Categorical
+    "encode_categorical_features",
+    "detect_significant_subgroups",
+    "generate_segmented_reports",
     # Influence detection
     "compute_cooks_distance",
     "detect_influential_points",

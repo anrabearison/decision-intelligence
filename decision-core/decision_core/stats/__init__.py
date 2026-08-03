@@ -2,7 +2,7 @@
 Package de statistiques pour decision-core.
 
 Ce package regroupe les fonctions de profiling, de régression,
-de détection d'influence et de détection de colonnes dérivées.
+de détection d'influence, de détection de colonnes dérivées et de traitement catégoriel.
 """
 from decision_core.stats.profiling import (
     descriptive_stats,
@@ -30,6 +30,11 @@ from decision_core.stats.derived_columns import (
     detect_derived_relationships,
     MAX_COLUMNS_FOR_DERIVED_DETECTION,
 )
+from decision_core.stats.categorical import (
+    encode_categorical_features,
+    detect_significant_subgroups,
+    generate_segmented_reports,
+)
 
 __all__ = [
     # Profiling
@@ -54,4 +59,8 @@ __all__ = [
     # Derived columns
     "detect_derived_relationships",
     "MAX_COLUMNS_FOR_DERIVED_DETECTION",
+    # Categorical
+    "encode_categorical_features",
+    "detect_significant_subgroups",
+    "generate_segmented_reports",
 ]

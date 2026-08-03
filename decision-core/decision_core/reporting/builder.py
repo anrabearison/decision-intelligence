@@ -223,6 +223,17 @@ def generate_report(
                 f"facteur(s) confondant(s) détecté(s) : {', '.join(confounders)}. "
                 f"Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe."
             )
+    
+    # Détection des sous-groupes significatifs (seulement si des colonnes numériques existent)
+    if numeric_cols:
+        from decision_core.stats.categorical import detect_significant_subgroups
+        significant_subgroups = detect_significant_subgroups(df, numeric_cols[0])
+        for subgroup in significant_subgroups:
+            warnings.append(
+                f"Sous-groupe significatif détecté : '{subgroup['column']}' explique "
+                f"{subgroup['eta_squared']:.1%} de la variance de la cible. "
+                f"Considérez une analyse segmentée par cette variable pour des insights plus précis."
+            )
 
     # — Simulation (optionnelle) —
     sim_dict: dict | None = None
