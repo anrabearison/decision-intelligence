@@ -19,6 +19,23 @@ All notable changes to decision-core will be documented in this file.
   - Intégration dans le reporting pour les 3 premières corrélations
   - Avertissement automatique quand un facteur confondant est détecté
 
+### Added (F3 - Détection d'asymétrie de baseline)
+
+- **Détection de distributions asymétriques**
+  - Ajout de `_build_asymmetry_warnings()` dans `reporting/warnings.py`
+  - Calcul du ratio |mean - median| / std pour détecter l'asymétrie
+  - Seuil calibré à 0.4 sur 18 domaines (21% des colonnes au-dessus)
+  - Avertissement explicite avec moyenne et médiane affichées
+- **Suggestion de segmentation**
+  - Liaison avec les sous-groupes significatifs détectés en P1.1
+  - Suggestion automatique d'analyse segmentée quand un sous-groupe existe
+- **Tests**
+  - 7 tests unitaires dans `test_report.py` (classe TestAsymmetryWarnings)
+  - Tests pour distributions asymétriques (Pareto), symétriques, et cas limites
+  - Test d'intégration avec `generate_report()`
+  - Validation sur `cybersecurite_incidents_2025.csv` (Test #16)
+  - Couverture > 97% sur `reporting/warnings.py`
+
 ### Added (P1.2 - Détection de non-linéarité)
 
 - **Détection de patterns quadratiques**

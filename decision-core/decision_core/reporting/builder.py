@@ -25,6 +25,7 @@ from decision_core.reporting.warnings import (
     _build_correlation_warnings,
     _build_simulation_warnings,
     _build_nonlinearity_warnings,
+    _build_asymmetry_warnings,
 )
 from decision_core.reporting.scoring import SMALL_SAMPLE_THRESHOLD
 
@@ -225,6 +226,7 @@ def generate_report(
             )
     
     # Détection des sous-groupes significatifs (seulement si des colonnes numériques existent)
+    significant_subgroups = []
     if numeric_cols:
         significant_subgroups = detect_significant_subgroups(df, numeric_cols[0])
         for subgroup in significant_subgroups:
@@ -236,6 +238,16 @@ def generate_report(
 
     # Détection de non-linéarité (P1.2)
     nonlinearity_patterns = _build_nonlinearity_warnings(df, numeric_cols, top_correlations, warnings)
+
+    # Détection d'asymétrie (F3) : contextuelle à la simulation si elle existe,
+    # descriptive et limitée sinon pour éviter de noyer l'utilisateur.
+    _build_asymmetry_warnings(
+        df,
+        numeric_cols,
+        [s['column'] for s in significant_subgroups],
+        warnings,
+        simulation_config=typed_simulation,
+    )
 
     # — Simulation (optionnelle) —
     sim_dict: dict | None = None

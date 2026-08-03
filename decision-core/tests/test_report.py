@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from decision_core.report import generate_report, render_text_summary, render_html
+from decision_core.reporting.warnings import _build_asymmetry_warnings
+from decision_core.models import SimulationConfig
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -289,6 +291,23 @@ class TestRenderTextSummary:
         text = render_text_summary(report)  # ne doit pas lever d'exception
         assert "non fiable" in text.lower() or "peu fiable" in text.lower()
 
+    def test_text_summary_uses_percentage_points_for_binary_target(self):
+        df = pd.DataFrame({
+            "Tickets_Support": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            "Desabonnement_Churn": [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+        })
+        report = generate_report(
+            df,
+            simulation_config={
+                "target": "Desabonnement_Churn",
+                "feature": "Tickets_Support",
+                "change_pct": 0.5,
+            },
+        )
+        text = render_text_summary(report)
+        assert "points" in text
+        assert "+1009" not in text
+
 
 class TestRenderHtml:
     def test_html_is_valid_looking_string(self):
@@ -316,3 +335,89 @@ class TestRenderHtml:
         html = render_html(report)
         assert "<script>alert(1)</script>" not in html
         assert "&lt;script&gt;" in html
+
+
+class TestAsymmetryWarnings:
+    """Tests pour la détection d'asymétrie (F3 - Baseline peu représentative)."""
+
+    def test_detects_asymmetric_distribution(self):
+        """Teste la détection d'une distribution asymétrique (Pareto)."""
+        df = pd.DataFrame({
+            "Cost": [15000, 12000, 18000, 10000, 20000, 950000, 280000, 320000, 15000, 12000]
+        })
+        warnings = []
+        _build_asymmetry_warnings(df, ["Cost"], [], warnings)
+        assert len(warnings) == 1
+        assert "Distribution asymétrique détectée pour 'Cost'" in warnings[0]
+        assert "Cost" in warnings[0]
+        assert "165 200" in warnings[0]  # moyenne calculée
+
+    def test_no_warning_on_symmetric_distribution(self):
+        """Teste qu'une distribution symétrique ne génère pas de warning."""
+        np.random.seed(42)
+        df = pd.DataFrame({
+            "Normal": np.random.normal(100, 10, 20)
+        })
+        warnings = []
+        _build_asymmetry_warnings(df, ["Normal"], [], warnings)
+        assert len(warnings) == 0
+
+    def test_suggests_segmentation_when_subgroup_detected(self):
+        """Teste la suggestion de segmentation quand un sous-groupe existe."""
+        df = pd.DataFrame({
+            "Cost": [15000, 12000, 18000, 10000, 20000, 950000, 280000, 320000, 15000, 12000]
+        })
+        warnings = []
+        _build_asymmetry_warnings(df, ["Cost"], ["Severity"], warnings)
+        assert len(warnings) == 1
+        assert "Considérez une analyse segmentée par 'Severity'" in warnings[0]
+
+    def test_handles_zero_std_gracefully(self):
+        """Teste le cas où std = 0 (toutes les valeurs identiques)."""
+        df = pd.DataFrame({
+            "Constant": [100] * 10
+        })
+        warnings = []
+        _build_asymmetry_warnings(df, ["Constant"], [], warnings)
+        assert len(warnings) == 0  # Pas de division par zéro
+
+    def test_integration_with_generate_report(self):
+        """Teste l'intégration dans generate_report."""
+        df = pd.DataFrame({
+            "Cost": [15000, 12000, 18000, 10000, 20000, 950000, 280000, 320000, 15000, 12000]
+        })
+        report = generate_report(df)
+        asymmetry_warnings = [w for w in report.warnings if "Distribution asymétrique" in w]
+        assert len(asymmetry_warnings) == 1
+
+    def test_simulation_context_limits_warning_to_target_and_feature(self):
+        """Avec simulation, seuls target/feature peuvent produire une alerte contextuelle."""
+        df = pd.DataFrame({
+            "Cost": [15000, 12000, 18000, 10000, 20000, 950000, 280000, 320000, 15000, 12000],
+            "Systems": [1, 1, 2, 1, 2, 20, 12, 14, 1, 1],
+            "OtherSkewed": [2, 2, 2, 2, 2, 500, 600, 700, 2, 2],
+        })
+        warnings = []
+        config = SimulationConfig(target="Cost", feature="Systems", change_pct=0.2)
+        _build_asymmetry_warnings(
+            df,
+            ["Cost", "Systems", "OtherSkewed"],
+            [],
+            warnings,
+            simulation_config=config,
+        )
+        assert warnings
+        assert any("Baseline de simulation peu représentative pour la cible 'Cost'" in w for w in warnings)
+        assert any("Point de départ du scénario peu représentatif pour le levier 'Systems'" in w for w in warnings)
+        assert not any("OtherSkewed" in w for w in warnings)
+
+    def test_without_simulation_limits_general_asymmetry_warnings_to_top_three(self):
+        """Sans simulation, le warning général reste limité pour éviter le bruit."""
+        df = pd.DataFrame({
+            f"Skewed_{i}": [1, 1, 1, 1, 1, 100 * (i + 1), 120 * (i + 1), 140 * (i + 1), 1, 1]
+            for i in range(5)
+        })
+        warnings = []
+        _build_asymmetry_warnings(df, list(df.columns), [], warnings)
+        assert len(warnings) == 3
+        assert all("Distribution asymétrique détectée" in w for w in warnings)
