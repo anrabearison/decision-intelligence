@@ -225,7 +225,106 @@ Ce tableau démontre comment **chaque critique identifiée dans l'audit** est di
 
 ---
 
-## 5. Recommandations d'Évolution pour decision-core
+## 5. Analyse des Répétitions de Critiques
+
+Sur les 18 tests réalisés, l'analyse transversale révèle que **les critiques ne sont pas indépendantes**. Elles se regroupent en **5 failles structurelles** qui se manifestent répétitivement sous des formes sectorielles différentes.
+
+> **Conclusion clé** : Ce ne sont pas 18 problèmes distincts — c'est le même ensemble de 5 limites architecturales qui se répète. Corriger ces 5 points résoudrait l'essentiel de la surface de risque du moteur.
+
+---
+
+### Faille #1 — Variables catégorielles / texte ignorées *(7 tests sur 18)*
+
+C'est la critique la plus universelle. Le moteur exclut toutes les colonnes non-numériques par conception, laissant systématiquement de côté les variables explicatives les plus importantes.
+
+| Test | Variable texte ignorée | Conséquence observée |
+|---|---|---|
+| #1 Ventes PME | `Region` | Baseline globale illusoire (ni Nord ni PACA) |
+| #3 Élevage | `Race` | Paradoxe de Simpson ($R = -0,88$) |
+| #5 Logistique | `Mode_Livraison` | $R^2 = 0,05$ — échec total |
+| #8 Immobilier | `Quartier` | $R^2 = 0,42$ — modèle médiocre |
+| #10 Hôtellerie | `Canal_Reservation` | Corrélation spurieuse sur les annulations |
+| #16 Cybersécurité | `Criticite` | Baseline à 167 993 € sans correspondance réelle |
+| #18 Agriculture | `Type_Sol` | 40% de variance du rendement inexpliquée |
+
+---
+
+### Faille #2 — Inversion de causalité / Facteur confondant *(4 tests sur 18)*
+
+Le moteur confond une corrélation spurieuse avec une relation de cause à effet, conduisant à des recommandations opérationnelles incorrectes, voire dangereuses.
+
+| Test | Corrélation spurieuse détectée | Vrai facteur confondant caché |
+|---|---|---|
+| #3 Élevage | Poids ↔ Taux de gras du lait ($R=-0,88$) | Race (Holstein légères vs Jersey lourdes) |
+| #6 Santé | Dosage ↔ Dégradation de la santé | Sévérité initiale du patient (biais d'indication) |
+| #10 Hôtellerie | Délai de réservation ↔ Annulation | Canal d'acquisition (Booking vs Direct) |
+| #17 Tourisme | Prix du billet ↔ Fréquentation | Saison (prix hauts ET visiteurs hauts en été) |
+
+---
+
+### Faille #3 — Baseline = moyenne globale sans sens métier *(3 tests sur 18)*
+
+La baseline calculée comme moyenne arithmétique de l'historique complet ne correspond à aucune situation concrète exploitable par un décideur.
+
+| Test | Baseline calculée | Problème métier |
+|---|---|---|
+| #1 Ventes PME | 2 261 €/transaction | Ni région Nord (3 500 €) ni PACA (1 200 €) |
+| #11 Restauration | 2 397 €/jour | Mélange weekends (haute affluence) + semaine |
+| #16 Cybersécurité | 167 993 € par incident | Aucun incident à ce coût : soit < 22 000 € soit > 280 000 € |
+
+---
+
+### Faille #4 — Non-linéarité ignorée (courbe en U / paliers / optimum) *(3 tests sur 18)*
+
+Le moteur applique systématiquement une droite linéaire, aveugle à toute relation en courbe, seuil ou optimum.
+
+| Test | Type de non-linéarité réelle |
+|---|---|
+| #5 Logistique | Tarification par paliers de poids (escaliers, pas une droite) |
+| #13 Énergie | Courbe en U : Chauffage (hiver) + Climatisation (été), creux au printemps |
+| #18 Agriculture | Optimum gaussien de pluviométrie (300-400 mm) : trop sec ET trop humide = mauvais rendement |
+
+---
+
+### Faille #5 — Distribution non-gaussienne traitée comme normale *(3 tests sur 18)*
+
+Le moteur de régression suppose implicitement une distribution gaussienne (loi normale). Cette hypothèse est incorrecte pour les données de comptage, les sinistres rares et les incidents à loi de puissance.
+
+| Test | Distribution réelle | Modèle adapté manquant |
+|---|---|---|
+| #9 Industrie | Comptages discrets (0, 1, 2, 5 pannes) | Régression de Poisson / Weibull |
+| #12 Assurance | Zéro-Inflated (75% à 0 € de sinistre) | Modèle à deux parties (Zero-Inflated) |
+| #16 Cybersécurité | Pareto / Loi de puissance (3 incidents = 95% des coûts) | Log-normale ou modèle de mélange |
+
+---
+
+### Carte de chaleur des failles par test
+
+| Test | F1 Catégories | F2 Causalité | F3 Baseline | F4 Non-linéarité | F5 Distribution |
+|---|:---:|:---:|:---:|:---:|:---:|
+| #1 Ventes PME | ✅ | | ✅ | | |
+| #2 RH | ✅ | ✅ | | | |
+| #3 Élevage | ✅ | ✅ | | | |
+| #4 Finance | | ✅ | | | |
+| #5 Logistique | ✅ | | | ✅ | |
+| #6 Santé | | ✅ | | | |
+| #7 Éducation | | | | ✅ | |
+| #8 Immobilier | ✅ | | | | |
+| #9 Industrie | | | | | ✅ |
+| #10 Hôtellerie | ✅ | ✅ | | | |
+| #11 Restauration | ✅ | | ✅ | | |
+| #12 Assurance | | | | | ✅ |
+| #13 Énergie | | | | ✅ | |
+| #14 Marketing | ✅ | | | | |
+| #15 SaaS | | | | | ✅ |
+| #16 Cybersécurité | ✅ | | ✅ | | ✅ |
+| #17 Tourisme | ✅ | ✅ | | | |
+| #18 Agriculture | ✅ | | | ✅ | |
+| **Total** | **9** | **6** | **3** | **4** | **4** |
+
+---
+
+## 6. Recommandations d'Évolution pour decision-core
 
 1. **Prise en compte des sous-groupes (Variables Catégorielles)** : Permettre au moteur de grouper les analyses par sous-groupes (`group_by` automatique par catégorie), ce qui éliminera 80% des pièges de Simpson et de confondateurs.
 2. **Régression Logistique pour cibles binaires (0/1)** : Détecter les colonnes cibles à deux valeurs (ex: Churn, Panne, Guéri) et basculer sur une régression logistique avec bornes [0, 1].
