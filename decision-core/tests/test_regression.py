@@ -227,3 +227,24 @@ class TestLogisticRegressionBinaryTarget:
         
         # Vérifier que le modèle retourné est bien LogisticRegressionResult
         assert model.model_type == "logistic"
+
+    def test_simulation_on_binary_target_returns_bounded_probabilities(self):
+        """Une cible binaire doit produire des probabilités, jamais une valeur linéaire non bornée."""
+        df = pd.DataFrame({
+            "Tickets_Support": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            "Desabonnement_Churn": [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+        })
+        result = simulate_scenario(
+            df,
+            target="Desabonnement_Churn",
+            feature="Tickets_Support",
+            change_pct=0.5,
+        )
+        assert 0 <= result.baseline <= 1
+        assert 0 <= result.simulated <= 1
+        assert result.model_type == "logistic"
+        assert result.change_pct is None
+        assert result.change_pct_reliable is False
+        assert result.change_percentage_points == pytest.approx(
+            (result.simulated - result.baseline) * 100
+        )

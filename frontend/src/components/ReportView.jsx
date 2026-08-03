@@ -1,5 +1,9 @@
 export default function ReportView({ report }) {
   const { dataset_summary, warnings, top_correlations, simulation, validation } = report
+  const hasProbabilityPointChange = simulation?.change_percentage_points !== undefined && simulation?.change_percentage_points !== null
+  const formatSimulationValue = (value) => (
+    hasProbabilityPointChange ? `${(value * 100).toFixed(1)}%` : value.toFixed(2)
+  )
 
   return (
     <div className="report">
@@ -66,15 +70,19 @@ export default function ReportView({ report }) {
           <h3 className="report__block-title">Simulation — {simulation.feature}</h3>
           <div className="sim-result">
             <div className="sim-result__value">
-              <span className="mono">{simulation.baseline.toFixed(2)}</span>
+              <span className="mono">{formatSimulationValue(simulation.baseline)}</span>
               <span className="sim-result__label">actuel</span>
             </div>
             <span className="sim-result__sep">→</span>
             <div className="sim-result__value">
-              <span className="mono">{simulation.simulated.toFixed(2)}</span>
+              <span className="mono">{formatSimulationValue(simulation.simulated)}</span>
               <span className="sim-result__label">simulé</span>
             </div>
-            {simulation.change_pct_reliable !== false && simulation.change_pct !== null ? (
+            {hasProbabilityPointChange ? (
+              <span className={`sim-result__change mono ${simulation.change_percentage_points >= 0 ? 'is-positive' : 'is-negative'}`}>
+                {simulation.change_percentage_points >= 0 ? '+' : ''}{simulation.change_percentage_points.toFixed(1)} pts
+              </span>
+            ) : simulation.change_pct_reliable !== false && simulation.change_pct !== null ? (
               <span className={`sim-result__change mono ${simulation.change_pct >= 0 ? 'is-positive' : 'is-negative'}`}>
                 {simulation.change_pct >= 0 ? '+' : ''}{simulation.change_pct.toFixed(1)}%
               </span>
@@ -82,14 +90,14 @@ export default function ReportView({ report }) {
               <span className="sim-result__change mono is-unreliable">% non fiable</span>
             )}
           </div>
-          {simulation.change_pct_reliable === false && (
+          {simulation.change_pct_reliable === false && !hasProbabilityPointChange && (
             <p className="report__disclaimer">
               Variation en % non fiable ici (valeur de référence trop proche de zéro) —
               se fier aux valeurs absolues ci-dessus.
             </p>
           )}
           <p className="report__disclaimer">
-            R² = {simulation.model_r_squared.toFixed(2)} — régression linéaire, échantillon limité.
+            R² = {simulation.model_r_squared.toFixed(2)} — {simulation.model_type === 'logistic' ? 'régression logistique' : 'régression linéaire'}, échantillon limité.
           </p>
         </section>
       )}

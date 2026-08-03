@@ -8,10 +8,13 @@ from decision_core.quality.anomaly_detection import MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.stats.regression import validate_regression_inputs
 from decision_core.stats.influence_detection import detect_influential_points
 from decision_core.stats.derived_columns import detect_derived_relationships
+from decision_core.stats.nonlinearity import detect_quadratic_pattern, detect_step_pattern
+from decision_core.models.nonlinearity import StepPatternResult
 
 
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
 LOW_R_SQUARED_THRESHOLD = 0.3
+ASYMMETRY_THRESHOLD = 0.4  # Calibré sur 18 domaines (21% des colonnes au-dessus)
 
 # R8 — Détection de colonnes temporelles pour le warning de saisonnalité.
 # Mots-clés cherchés dans les noms de colonnes (insensible à la casse).
@@ -145,6 +148,7 @@ def _build_simulation_warnings(
     simulation_result: dict,
     n_rows: int,
     warnings: list[str],
+    nonlinearity_patterns: list = None,
 ) -> None:
     """Enrichit les warnings avec les informations sur la simulation.
 
@@ -154,6 +158,7 @@ def _build_simulation_warnings(
         simulation_result: Résultat de la simulation.
         n_rows: Nombre de lignes du dataset.
         warnings: Liste des warnings à enrichir (modifiée en place).
+        nonlinearity_patterns: Liste des patterns non-linéaires détectés (optionnel).
     """
     # Vérification de l'échantillon effectif (post-dropna sur les colonnes
     # utilisées) — un dataset de 40 lignes peut n'avoir que 5 valeurs
@@ -193,3 +198,170 @@ def _build_simulation_warnings(
             f"seul point atypique. Vérifier ces valeurs avant de "
             f"s'y fier."
         )
+
+    # Warning spécifique si la feature de simulation fait partie d'une relation non-linéaire
+    if nonlinearity_patterns:
+        for pattern in nonlinearity_patterns:
+            if pattern.feature == simulation_config.feature:
+                if isinstance(pattern, StepPatternResult):
+                    warnings.append(
+                        f"Relation non-linéaire détectée (paliers) entre "
+                        f"'{pattern.feature}' et '{pattern.target}' : "
+                        f"la simulation linéaire peut être trompeuse sur cette "
+                        f"variable. La relation fonctionne par tranches de "
+                        f"tarification ou seuils, pas par une droite continue."
+                    )
+                elif hasattr(pattern, "pattern_type"):
+                    if pattern.pattern_type == "u_curve":
+                        warnings.append(
+                            f"Relation non-linéaire détectée (courbe en U) entre "
+                            f"'{pattern.feature}' et '{pattern.target}' : "
+                            f"la simulation linéaire peut être trompeuse sur cette "
+                            f"variable. Les effets ne sont pas proportionnels - "
+                            f"une augmentation de la feature peut avoir un impact "
+                            f"différent selon le niveau de départ."
+                        )
+                    elif pattern.pattern_type == "optimum":
+                        warnings.append(
+                            f"Relation non-linéaire détectée (optimum) entre "
+                            f"'{pattern.feature}' et '{pattern.target}' : "
+                            f"la simulation linéaire peut être trompeuse sur cette "
+                            f"variable. Il existe un niveau optimal de la feature "
+                            f"au-delà duquel l'effet s'inverse - la simulation "
+                            f"linéaire ne capture pas cette dynamique."
+                        )
+
+
+def _build_nonlinearity_warnings(
+    df: pd.DataFrame,
+    numeric_cols: list[str],
+    top_correlations: list,
+    warnings: list[str],
+) -> list:
+    """Détecte les patterns non-linéaires et ajoute des warnings pédagogiques.
+
+    Args:
+        df: DataFrame pandas à analyser.
+        numeric_cols: Liste des colonnes numériques.
+        top_correlations: Liste des corrélations principales.
+        warnings: Liste des warnings à enrichir (modifiée en place).
+
+    Returns:
+        Liste des patterns non-linéaires détectés (pour réutilisation dans _build_simulation_warnings).
+    """
+    nonlinearity_patterns = []
+
+    # Limiter l'analyse aux paires de top_correlations pour éviter l'explosion combinatoire
+    for corr in top_correlations:
+        feature = corr["column_a"]
+        target = corr["column_b"]
+
+        # Détection de pattern quadratique
+        quadratic_result = detect_quadratic_pattern(df, target, feature)
+        if quadratic_result:
+            nonlinearity_patterns.append(quadratic_result)
+            if quadratic_result.pattern_type == "u_curve":
+                warnings.append(
+                    f"Relation non-linéaire détectée (courbe en U) entre "
+                    f"'{quadratic_result.feature}' et '{quadratic_result.target}' : "
+                    f"la régression linéaire peut être trompeuse sur cette paire. "
+                    f"Les effets ne sont pas proportionnels - une augmentation de "
+                    f"la feature peut avoir un impact différent selon le niveau de départ."
+                )
+            elif quadratic_result.pattern_type == "optimum":
+                warnings.append(
+                    f"Relation non-linéaire détectée (optimum) entre "
+                    f"'{quadratic_result.feature}' et '{quadratic_result.target}' : "
+                    f"la régression linéaire peut être trompeuse sur cette paire. "
+                    f"Il existe un niveau optimal de la feature au-delà duquel "
+                    f"l'effet s'inverse - la régression linéaire ne capture pas "
+                    f"cette dynamique."
+                )
+
+        # Détection de pattern par paliers
+        step_result = detect_step_pattern(df, target, feature)
+        if step_result:
+            nonlinearity_patterns.append(step_result)
+            warnings.append(
+                f"Relation non-linéaire détectée (paliers) entre "
+                f"'{step_result.feature}' et '{step_result.target}' : "
+                f"la régression linéaire peut être trompeuse sur cette paire. "
+                f"La relation fonctionne par tranches de tarification ou seuils, "
+                f"pas par une droite continue."
+            )
+
+    return nonlinearity_patterns
+
+
+def _build_asymmetry_warnings(
+    df: pd.DataFrame,
+    numeric_cols: list[str],
+    significant_subgroups: list,
+    warnings: list[str],
+    simulation_config=None,
+    max_warnings: int = 3,
+) -> None:
+    """Détecte les distributions asymétriques et avertit sans changer la simulation.
+
+    Le ratio |mean - median| / std > ASYMMETRY_THRESHOLD indique une asymétrie significative.
+    Avec simulation, l'alerte est limitée à la cible et à la feature du scénario :
+    ce sont les seules colonnes qui influencent directement la baseline présentée.
+    Sans simulation, l'alerte reste descriptive et limitée aux colonnes les plus
+    asymétriques pour éviter de transformer un signal utile en bruit.
+
+    Args:
+        df: DataFrame pandas à analyser.
+        numeric_cols: Liste des colonnes numériques.
+        significant_subgroups: Liste des sous-groupes significatifs détectés (pour suggestion).
+        warnings: Liste des warnings à enrichir (modifiée en place).
+        simulation_config: Configuration de simulation optionnelle.
+        max_warnings: Nombre maximum de warnings hors simulation.
+    """
+    if simulation_config is not None:
+        relevant_cols = [
+            col for col in [simulation_config.target, simulation_config.feature]
+            if col in numeric_cols
+        ]
+        limit = len(relevant_cols)
+    else:
+        relevant_cols = list(numeric_cols)
+        limit = max_warnings
+
+    candidates = []
+    for col in relevant_cols:
+        mean_val = df[col].mean()
+        median_val = df[col].median()
+        std_val = df[col].std()
+
+        if std_val > 0:
+            asymmetry_ratio = abs(mean_val - median_val) / std_val
+
+            if asymmetry_ratio > ASYMMETRY_THRESHOLD:
+                candidates.append((asymmetry_ratio, col, mean_val, median_val))
+
+    for asymmetry_ratio, col, mean_val, median_val in sorted(candidates, reverse=True)[:limit]:
+        mean_str = f"{mean_val:,.2f}".replace(",", " ")
+        median_str = f"{median_val:,.2f}".replace(",", " ")
+
+        if simulation_config is not None and col == simulation_config.target:
+            subject = f"Baseline de simulation peu représentative pour la cible '{col}'"
+            interpretation = "La valeur de référence affichée peut ne pas représenter un cas typique."
+        elif simulation_config is not None and col == simulation_config.feature:
+            subject = f"Point de départ du scénario peu représentatif pour le levier '{col}'"
+            interpretation = "Le changement simulé part d'une valeur moyenne qui peut ne pas représenter un cas typique."
+        else:
+            subject = f"Distribution asymétrique détectée pour '{col}'"
+            interpretation = "Résultat à interpréter avec prudence."
+
+        warning = (
+            f"{subject} : la moyenne ({mean_str}) "
+            f"est très éloignée de la médiane ({median_str}) à cause de valeurs "
+            f"extrêmes (ratio asymétrie = {asymmetry_ratio:.2f}). "
+            f"{interpretation}"
+        )
+
+        if significant_subgroups:
+            subgroup = significant_subgroups[0]
+            warning += f" Considérez une analyse segmentée par '{subgroup}'."
+
+        warnings.append(warning)

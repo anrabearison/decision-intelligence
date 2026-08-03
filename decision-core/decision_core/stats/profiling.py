@@ -96,6 +96,8 @@ def correlation_pvalues(df: pd.DataFrame) -> list:
         subset = df[[col_a, col_b]].dropna()
         if len(subset) < 3:
             continue
+        if subset[col_a].nunique() < 2 or subset[col_b].nunique() < 2:
+            continue
         r, p = stats.pearsonr(subset[col_a], subset[col_b])
         pairs.append({"column_a": col_a, "column_b": col_b, "value": float(r), "p_value": float(p)})
 

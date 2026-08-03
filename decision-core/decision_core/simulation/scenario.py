@@ -26,12 +26,22 @@ Paramètres optionnels ajoutés (Phase 1a - refonte) :
 """
 from decision_core.stats.regression import fit_simple_regression
 from decision_core.models import SimulationConfig, SimulationResult
+import numpy as np
 import pandas as pd
 
 
 # Si |baseline| est sous ce seuil relatif à l'écart-type de la cible,
 # un pourcentage de variation n'est pas jugé fiable.
 NEAR_ZERO_BASELINE_RATIO = 0.1
+
+
+def _predict_from_model(model, feature_value: float) -> float:
+    """Retourne une prédiction bornée correctement selon le type de modèle."""
+    if getattr(model, "model_type", None) == "logistic":
+        z = model.intercept + model.coefficient * feature_value
+        z = np.clip(z, -500, 500)
+        return float(1 / (1 + np.exp(-z)))
+    return float(model.intercept + model.slope * feature_value)
 
 
 def simulate_scenario(
@@ -71,9 +81,9 @@ def simulate_scenario(
         else df[config.feature].mean()
     )
 
-    baseline = model.intercept + model.slope * ref_feature_value
+    baseline = _predict_from_model(model, ref_feature_value)
     simulated_feature_value = ref_feature_value * (1 + config.change_pct)
-    simulated = model.intercept + model.slope * simulated_feature_value
+    simulated = _predict_from_model(model, simulated_feature_value)
 
     bounds_applied: bool | None = None
     if config.bounds is not None:
@@ -82,11 +92,18 @@ def simulate_scenario(
         simulated = max(min_val, min(max_val, simulated))
 
     target_std = df[config.target].std()
-    is_reliable = target_std == 0 or abs(baseline) >= NEAR_ZERO_BASELINE_RATIO * target_std
+    model_type = getattr(model, "model_type", "linear")
+    is_probability_model = model_type == "logistic"
+    is_reliable = (
+        not is_probability_model
+        and (target_std == 0 or abs(baseline) >= NEAR_ZERO_BASELINE_RATIO * target_std)
+    )
 
     change_pct_result = (
         (simulated - baseline) / baseline * 100 if is_reliable else None
     )
+    change_absolute = simulated - baseline
+    change_percentage_points = change_absolute * 100 if is_probability_model else None
 
     return SimulationResult(
         baseline=float(baseline),
@@ -96,5 +113,10 @@ def simulate_scenario(
         model_r_squared=model.r_squared,
         feature=config.feature,
         target=config.target,
+        change_absolute=float(change_absolute),
+        change_percentage_points=(
+            float(change_percentage_points) if change_percentage_points is not None else None
+        ),
+        model_type=model_type,
         bounds_applied=bounds_applied,
     )

@@ -45,11 +45,20 @@ def compute_cooks_distance(df: pd.DataFrame, feature: str, target: str) -> np.nd
     clean = validate_regression_inputs(df, [feature, target])
     model = fit_simple_regression(clean, target=target, feature=feature)
 
+    # La distance de Cook est définie pour la régression linéaire OLS.
+    # Si fit_simple_regression a basculé sur une régression logistique
+    # (cible binaire), le concept de résidu OLS ne s'applique pas : on
+    # retourne un tableau de zéros (= aucun point influent détecté).
+    slope = getattr(model, "slope", None)
+    if slope is None:
+        x = clean[feature].values.astype(float)
+        return np.zeros(len(x))
+
     x = clean[feature].values.astype(float)
     y = clean[target].values.astype(float)
     n = len(x)
 
-    y_pred = model.intercept + model.slope * x
+    y_pred = model.intercept + slope * x
     residuals = y - y_pred
 
 
@@ -69,6 +78,7 @@ def compute_cooks_distance(df: pd.DataFrame, feature: str, target: str) -> np.nd
 
     cooks_d = (residuals ** 2 / (p * mse)) * (leverage / (1 - leverage) ** 2)
     return cooks_d
+
 
 
 def detect_influential_points(

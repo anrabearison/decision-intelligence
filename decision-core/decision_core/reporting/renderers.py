@@ -34,7 +34,13 @@ def render_text_summary(report: ReportResult) -> str:
 
     if report.simulation is not None:
         sim = report.simulation
-        if sim.get("change_pct_reliable", True):
+        if sim.get("change_percentage_points") is not None:
+            lines.append(
+                f"💡 Simulation sur '{sim['feature']}' : "
+                f"{sim['baseline']:.1%} → {sim['simulated']:.1%} "
+                f"({sim['change_percentage_points']:+.1f} points)."
+            )
+        elif sim.get("change_pct_reliable", True):
             lines.append(
                 f"💡 Simulation sur '{sim['feature']}' : "
                 f"{sim['baseline']:.1f} → {sim['simulated']:.1f} "

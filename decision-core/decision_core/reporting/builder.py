@@ -24,6 +24,8 @@ from decision_core.reporting.warnings import (
     _build_seasonality_warnings,
     _build_correlation_warnings,
     _build_simulation_warnings,
+    _build_nonlinearity_warnings,
+    _build_asymmetry_warnings,
 )
 from decision_core.reporting.scoring import SMALL_SAMPLE_THRESHOLD
 
@@ -224,6 +226,7 @@ def generate_report(
             )
     
     # Détection des sous-groupes significatifs (seulement si des colonnes numériques existent)
+    significant_subgroups = []
     if numeric_cols:
         significant_subgroups = detect_significant_subgroups(df, numeric_cols[0])
         for subgroup in significant_subgroups:
@@ -233,11 +236,24 @@ def generate_report(
                 f"Considérez une analyse segmentée par cette variable pour des insights plus précis."
             )
 
+    # Détection de non-linéarité (P1.2)
+    nonlinearity_patterns = _build_nonlinearity_warnings(df, numeric_cols, top_correlations, warnings)
+
+    # Détection d'asymétrie (F3) : contextuelle à la simulation si elle existe,
+    # descriptive et limitée sinon pour éviter de noyer l'utilisateur.
+    _build_asymmetry_warnings(
+        df,
+        numeric_cols,
+        [s['column'] for s in significant_subgroups],
+        warnings,
+        simulation_config=typed_simulation,
+    )
+
     # — Simulation (optionnelle) —
     sim_dict: dict | None = None
     if typed_simulation is not None:
         sim_dict = _build_simulation_section(df, typed_simulation)
-        _build_simulation_warnings(df, typed_simulation, sim_dict, n_rows, warnings)
+        _build_simulation_warnings(df, typed_simulation, sim_dict, n_rows, warnings, nonlinearity_patterns)
 
     # — R8 : Saisonnalité (avant R9 pour intégrer le warning au score) —
     _build_seasonality_warnings(df, corr_pairs, warnings)
