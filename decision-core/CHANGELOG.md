@@ -19,6 +19,37 @@ All notable changes to decision-core will be documented in this file.
   - Intégration dans le reporting pour les 3 premières corrélations
   - Avertissement automatique quand un facteur confondant est détecté
 
+### Added (P1.2 - Détection de non-linéarité)
+
+- **Détection de patterns quadratiques**
+  - Ajout de `detect_quadratic_pattern()` pour détecter les courbes en U et les optimaux gaussiens
+  - Comparaison R² ajusté linéaire vs quadratique
+  - Test de significativité du coefficient quadratique (p < 0.05)
+  - Distinction automatique "u_curve" (creux) vs "optimum" (cloche)
+- **Détection de patterns par paliers**
+  - Ajout de `detect_step_pattern()` pour détecter les fonctions par paliers (step functions)
+  - Discrétisation en quantiles adaptative à la taille de l'échantillon
+  - Comparaison eta² par bins vs R² linéaire
+  - Seuil d'amélioration de 0.05 pour éviter les faux positifs
+- **Modèles de résultats**
+  - Ajout de `QuadraticPatternResult` dataclass (frozen=True)
+  - Ajout de `StepPatternResult` dataclass (frozen=True)
+  - Export dans `decision_core.models.__init__`
+- **Intégration dans le reporting**
+  - Ajout de `_build_nonlinearity_warnings()` dans `reporting/warnings.py`
+  - Détection limitée aux paires de top_correlations pour éviter l'explosion combinatoire
+  - Avertissements pédagogiques en français pour chaque type de relation détectée
+  - Avertissement spécifique dans `_build_simulation_warnings()` si la feature de simulation est non-linéaire
+- **Garde-fous pour petit échantillon**
+  - Seuil minimum n >= 10 pour toute détection de non-linéarité
+  - Robustesse sur ~15 lignes (taille typique des datasets d'exemple)
+- **Tests**
+  - 10 tests unitaires dans `test_nonlinearity.py`
+  - Tests pour courbes en U, optimaux, relations linéaires, paliers, et garde-fous
+  - Test d'intégration avec `generate_report()`
+  - Validation sur `energie_batiments_2025.csv` et `agriculture_rendement_2025.csv`
+  - Couverture > 89% sur les nouveaux fichiers
+
 ### Added (P1.1 - Encodage catégoriel et sous-groupes)
 
 - **Encodage one-hot automatique**

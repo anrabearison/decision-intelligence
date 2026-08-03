@@ -8,6 +8,8 @@ from decision_core.quality.anomaly_detection import MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.stats.regression import validate_regression_inputs
 from decision_core.stats.influence_detection import detect_influential_points
 from decision_core.stats.derived_columns import detect_derived_relationships
+from decision_core.stats.nonlinearity import detect_quadratic_pattern, detect_step_pattern
+from decision_core.models.nonlinearity import StepPatternResult
 
 
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
@@ -145,6 +147,7 @@ def _build_simulation_warnings(
     simulation_result: dict,
     n_rows: int,
     warnings: list[str],
+    nonlinearity_patterns: list = None,
 ) -> None:
     """Enrichit les warnings avec les informations sur la simulation.
 
@@ -154,6 +157,7 @@ def _build_simulation_warnings(
         simulation_result: Résultat de la simulation.
         n_rows: Nombre de lignes du dataset.
         warnings: Liste des warnings à enrichir (modifiée en place).
+        nonlinearity_patterns: Liste des patterns non-linéaires détectés (optionnel).
     """
     # Vérification de l'échantillon effectif (post-dropna sur les colonnes
     # utilisées) — un dataset de 40 lignes peut n'avoir que 5 valeurs
@@ -193,3 +197,95 @@ def _build_simulation_warnings(
             f"seul point atypique. Vérifier ces valeurs avant de "
             f"s'y fier."
         )
+
+    # Warning spécifique si la feature de simulation fait partie d'une relation non-linéaire
+    if nonlinearity_patterns:
+        for pattern in nonlinearity_patterns:
+            if pattern.feature == simulation_config.feature:
+                if pattern.pattern_type == "u_curve":
+                    warnings.append(
+                        f"Relation non-linéaire détectée (courbe en U) entre "
+                        f"'{pattern.feature}' et '{pattern.target}' : "
+                        f"la simulation linéaire peut être trompeuse sur cette "
+                        f"variable. Les effets ne sont pas proportionnels - "
+                        f"une augmentation de la feature peut avoir un impact "
+                        f"différent selon le niveau de départ."
+                    )
+                elif pattern.pattern_type == "optimum":
+                    warnings.append(
+                        f"Relation non-linéaire détectée (optimum) entre "
+                        f"'{pattern.feature}' et '{pattern.target}' : "
+                        f"la simulation linéaire peut être trompeuse sur cette "
+                        f"variable. Il existe un niveau optimal de la feature "
+                        f"au-delà duquel l'effet s'inverse - la simulation "
+                        f"linéaire ne capture pas cette dynamique."
+                    )
+                elif isinstance(pattern, StepPatternResult):
+                    warnings.append(
+                        f"Relation non-linéaire détectée (paliers) entre "
+                        f"'{pattern.feature}' et '{pattern.target}' : "
+                        f"la simulation linéaire peut être trompeuse sur cette "
+                        f"variable. La relation fonctionne par tranches de "
+                        f"tarification ou seuils, pas par une droite continue."
+                    )
+
+
+def _build_nonlinearity_warnings(
+    df: pd.DataFrame,
+    numeric_cols: list[str],
+    top_correlations: list,
+    warnings: list[str],
+) -> list:
+    """Détecte les patterns non-linéaires et ajoute des warnings pédagogiques.
+
+    Args:
+        df: DataFrame pandas à analyser.
+        numeric_cols: Liste des colonnes numériques.
+        top_correlations: Liste des corrélations principales.
+        warnings: Liste des warnings à enrichir (modifiée en place).
+
+    Returns:
+        Liste des patterns non-linéaires détectés (pour réutilisation dans _build_simulation_warnings).
+    """
+    nonlinearity_patterns = []
+
+    # Limiter l'analyse aux paires de top_correlations pour éviter l'explosion combinatoire
+    for corr in top_correlations:
+        feature = corr["column_a"]
+        target = corr["column_b"]
+
+        # Détection de pattern quadratique
+        quadratic_result = detect_quadratic_pattern(df, target, feature)
+        if quadratic_result:
+            nonlinearity_patterns.append(quadratic_result)
+            if quadratic_result.pattern_type == "u_curve":
+                warnings.append(
+                    f"Relation non-linéaire détectée (courbe en U) entre "
+                    f"'{quadratic_result.feature}' et '{quadratic_result.target}' : "
+                    f"la régression linéaire peut être trompeuse sur cette paire. "
+                    f"Les effets ne sont pas proportionnels - une augmentation de "
+                    f"la feature peut avoir un impact différent selon le niveau de départ."
+                )
+            elif quadratic_result.pattern_type == "optimum":
+                warnings.append(
+                    f"Relation non-linéaire détectée (optimum) entre "
+                    f"'{quadratic_result.feature}' et '{quadratic_result.target}' : "
+                    f"la régression linéaire peut être trompeuse sur cette paire. "
+                    f"Il existe un niveau optimal de la feature au-delà duquel "
+                    f"l'effet s'inverse - la régression linéaire ne capture pas "
+                    f"cette dynamique."
+                )
+
+        # Détection de pattern par paliers
+        step_result = detect_step_pattern(df, target, feature)
+        if step_result:
+            nonlinearity_patterns.append(step_result)
+            warnings.append(
+                f"Relation non-linéaire détectée (paliers) entre "
+                f"'{step_result.feature}' et '{step_result.target}' : "
+                f"la régression linéaire peut être trompeuse sur cette paire. "
+                f"La relation fonctionne par tranches de tarification ou seuils, "
+                f"pas par une droite continue."
+            )
+
+    return nonlinearity_patterns

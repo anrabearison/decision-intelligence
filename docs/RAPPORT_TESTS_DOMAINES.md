@@ -84,8 +84,9 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 * **Résultat obtenu** : Baseline = 44,40 h, Simulation = 45,07 h (+1,51%), $R^2 = 0,053$ (Échec).
 * **Analyse & Critique Métier** :
   - ~~**$R^2$ dérisoire (5%)** : Le temps dépend du `Mode_Livraison` (Express en 18h vs Relais en 48h), pas de la distance. Ignorer la colonne texte du mode de livraison rend la simulation inutile.~~
-  - **Tarifs par paliers** : Les frais de port fonctionnent par tranches de poids fixes, inaccessibles à la régression linéaire.
+  - ~~**Tarifs par paliers** : Les frais de port fonctionnent par tranches de poids fixes, inaccessibles à la régression linéaire.~~
 * <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.1)** : Le moteur identifie désormais `Mode_Livraison` comme le sous-groupe principal ($\eta^2$) déterminant le temps de livraison.</span>
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2)** : Le moteur détecte désormais les relations par paliers (step functions) et avertit que la régression linéaire peut être trompeuse sur ce type de relation.</span>
 
 ### Test 6 : Santé & Suivi Clinique
 * **Fichier de test** : `examples/sante_clinique_2025.csv`
@@ -144,7 +145,8 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 * **Configuration de simulation** : Target = `Consommation_KWh`, Feature = `Temperature_Exterieure_C`, Change % = `+20%`
 * **Résultat obtenu** : Baseline = 3 586,67 kWh, Simulation = 3 173,95 kWh (-11,51%), $R^2 = 0,627$.
 * **Analyse & Critique Métier** :
-  - **Courbe en U (Climatisation)** : La consommation monte en hiver (Chauffage) et remonte en été (Climatisation). Le modèle linéaire rate le creux parabolique.
+  - ~~**Courbe en U (Climatisation)** : La consommation monte en hiver (Chauffage) et remonte en été (Climatisation). Le modèle linéaire rate le creux parabolique.~~
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2)** : Le moteur détecte désormais les relations par paliers (step functions) entre `Surface_Chauffee_M2` et la consommation, et avertit que la régression linéaire peut être trompeuse sur ce type de relation.</span>
 
 ### Test 14 : Marketing Digital & SEO/Adwords
 * **Fichier de test** : `examples/marketing_digital_2025.csv`
@@ -229,9 +231,10 @@ Ce tableau démontre comment **chaque critique identifiée dans l'audit** est di
 * **Résultat obtenu** : Baseline = 56,80 q/ha, Simulation = 56,90 q/ha (+0,18%), $R^2 = 0,0003$ (Effondrement total).
 * **Analyse & Critique Métier** :
   - **Effondrement complet du modèle ($R^2 = 0,0003$)** : La pluviométrie n'explique que 0,03% du rendement selon le modèle. Résultat en réalité attendu par un agronome.
-  - **Relation en courbe de Gauss (Optimum de pluviométrie)** : Trop peu de pluie (150 mm → sécheresse) ET trop de pluie (620 mm → noyade des cultures) réduisent le rendement. Le meilleur rendement se situe entre 280 et 400 mm. Une droite linéaire est aveugle à cet optimum parabolicique.
+  - ~~**Relation en courbe de Gauss (Optimum de pluviométrie)** : Trop peu de pluie (150 mm → sécheresse) ET trop de pluie (620 mm → noyade des cultures) réduisent le rendement. Le meilleur rendement se situe entre 280 et 400 mm. Une droite linéaire est aveugle à cet optimum parabolicique.~~
   - ~~**Le Type de sol est ignoré** : Le Limon produit 72 q/ha tandis que le Sable produit 40 q/ha à pluviométrie équivalente. La colonne texte `Type_Sol` est la variable déterminante non prise en compte.~~
-* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.1)** : Le moteur détecte désormais que `Type_Sol` est responsable de 88% de la variance du rendement et avertit l'utilisateur. La non-linéarité (courbe gaussienne) reste à traiter (Phase P1.2).</span>
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.1)** : Le moteur détecte désormais que `Type_Sol` est responsable de 88% de la variance du rendement et avertit l'utilisateur.</span>
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2)** : Le moteur détecte désormais les relations non-linéaires (optimum gaussien) entre `Temperature_Moy_C`/`Engrais_Kg_Ha` et le rendement, et avertit que la régression linéaire peut être trompeuse sur ce type de relation.</span>
 
 ---
 

@@ -12,6 +12,7 @@ from decision_core.models.regression import (
 from decision_core.models.simulation import SimulationResult
 from decision_core.models.anomaly import AnomalyDetectionResult
 from decision_core.models.report import DatasetSummary, ExploitabilityScore, ReportResult
+from decision_core.models.nonlinearity import QuadraticPatternResult, StepPatternResult
 
 __all__ = [
     # Config
@@ -27,4 +28,7 @@ __all__ = [
     "ReportResult",
     "DatasetSummary",
     "ExploitabilityScore",
+    # Nonlinearity results
+    "QuadraticPatternResult",
+    "StepPatternResult",
 ]
