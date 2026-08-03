@@ -122,14 +122,14 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 ### Test 11 : Restauration & Gastronomie
 * **Fichier de test** : `examples/restauration_gastronomie_2025.csv`
 * **Configuration de simulation** : Target = `Chiffre_Affaires_Jour`, Feature = `Nombre_Couverts`, Change % = `+20%`
-* **Résultat obtenu** : Baseline = 2 396,93 €, Simulation = 2 876,32 € (+20,00%), $R^2 = 0,996$.
+* **Résultat obtenu** : Baseline = 2 528,82 €, Simulation = 3 208,82 € (+26,89%), $R^2 = 0,995$.
 * **Analyse & Critique Métier** :
   - **Effet Weekend et Météo ignorés** : L'affluence dépend du `Jour_Semaine` et de la `Meteo` (variables texte non lues).
 
 ### Test 12 : Assurance & Sinistralité
 * **Fichier de test** : `examples/assurance_sinistres_2025.csv`
 * **Configuration de simulation** : Target = `Cout_Indemnisation_Euros`, Feature = `Puissance_Vehicule_CV`, Change % = `+15%`
-* **Résultat obtenu** : Baseline = 3 393,33 €, Simulation = 4 580,20 € (+34,98%), $R^2 = 0,482$.
+* **Résultat obtenu** : Baseline = 3 393,33 €, Simulation = 5 286,67 € (+55,80%), $R^2 = 0,298$.
 * **Analyse & Critique Métier** :
   - **Distribution Zéro-Inflated** : 75% des assurés ont 0 € de sinistre. Une régression linéaire produit un coût moyen fictif sans utilité actuarielle.
 
@@ -150,7 +150,7 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 ### Test 15 : SaaS & Abonnements (Churn)
 * **Fichier de test** : `examples/saas_abonnements_2025.csv`
 * **Configuration de simulation** : Target = `Desabonnement_Churn`, Feature = `Tickets_Support`, Change % = `+50%`
-* **Résultat obtenu** : Baseline = 0,267 (26.7%), Simulation = 0,479 (47.9%), $R^2 = 0,643$.
+* **Résultat obtenu** : Baseline = 0,267 (26.7%), Simulation = 0,479 (47.9%) soit +79,45% relatif, $R^2 = 0,643$.
 * **Analyse & Critique Métier** :
   - **Cible binaire (Churn 0/1)** : Événement binaire estimé par régression linéaire ordinaire au lieu d'une régression logistique.
 
