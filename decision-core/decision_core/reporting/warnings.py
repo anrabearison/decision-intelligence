@@ -3,11 +3,11 @@ Détection de warnings contextuels pour decision-core.
 """
 import re
 import pandas as pd
-from decision_core.profiling import MAX_COLUMNS_FOR_CORRELATION
-from decision_core.anomaly_detection import MIN_RELIABLE_SAMPLE_SIZE
-from decision_core.regression import validate_regression_inputs
-from decision_core.influence_detection import detect_influential_points
-from decision_core.derived_columns import detect_derived_relationships
+from decision_core.stats.profiling import MAX_COLUMNS_FOR_CORRELATION
+from decision_core.quality.anomaly_detection import MIN_RELIABLE_SAMPLE_SIZE
+from decision_core.stats.regression import validate_regression_inputs
+from decision_core.stats.influence_detection import detect_influential_points
+from decision_core.stats.derived_columns import detect_derived_relationships
 
 
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE

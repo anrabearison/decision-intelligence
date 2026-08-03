@@ -2,13 +2,13 @@
 Construction du rapport pour decision-core.
 """
 import pandas as pd
-from decision_core.validation import validate_dataset
-from decision_core.profiling import (
+from decision_core.quality.validation import validate_dataset
+from decision_core.stats.profiling import (
     descriptive_stats,
     correlation_pvalues,
     legitimate_numeric_columns,
 )
-from decision_core.anomaly_detection import detect_anomalies_iqr
+from decision_core.quality.anomaly_detection import detect_anomalies_iqr
 from decision_core.simulation import simulate_scenario
 from decision_core.models import (
     SimulationConfig,
@@ -209,7 +209,7 @@ def generate_report(
     # — Corrélations —
     top_correlations, corr_pairs = _build_correlations_section(df, numeric_cols)
     # Récupérer les relations dérivées pour les warnings
-    from decision_core.derived_columns import detect_derived_relationships
+    from decision_core.stats.derived_columns import detect_derived_relationships
     derived_relationships = detect_derived_relationships(df, numeric_cols)
     _build_correlation_warnings(df, numeric_cols, corr_pairs, derived_relationships, warnings)
 
