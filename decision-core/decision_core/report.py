@@ -26,7 +26,13 @@ from decision_core.influence_detection import detect_influential_points
 from decision_core.regression import validate_regression_inputs
 
 from decision_core.derived_columns import detect_derived_relationships
-from decision_core.models import SimulationConfig, AnalysisConfig
+from decision_core.models import (
+    SimulationConfig,
+    AnalysisConfig,
+    DatasetSummary,
+    ExploitabilityScore,
+    ReportResult,
+)
 
 
 
@@ -77,7 +83,7 @@ def _compute_exploitability_score(
     n_warnings: int,
     n_anomaly_cols: int,
     r_squared: float | None,
-) -> dict:
+) -> ExploitabilityScore:
     """R9 — Calcule un score synthétique d'exploitabilité du dataset.
 
     Logique heuristique :
@@ -86,7 +92,8 @@ def _compute_exploitability_score(
     - R² de la simulation si disponible
     - Présence de colonnes avec anomalies
 
-    Retourne un dict avec 'level' (green/orange/red) et 'summary' (texte).
+    Returns:
+        ExploitabilityScore typé avec level, score et summary.
     """
     score = 100
 
@@ -121,7 +128,7 @@ def _compute_exploitability_score(
         level = "red"
         summary = "Données insuffisantes ou trop limitées — les résultats sont indicatifs uniquement."
 
-    return {"level": level, "score": score, "summary": summary}
+    return ExploitabilityScore(level=level, score=score, summary=summary)
 
 
 def _normalize_configs(
@@ -317,7 +324,7 @@ def generate_report(
     df: pd.DataFrame,
     simulation_config: SimulationConfig | dict | None = None,
     analysis_config: AnalysisConfig | dict | None = None,
-) -> dict:
+) -> ReportResult:
     """Génère le rapport d'analyse complet du DataFrame.
 
     Orchestre les sous-fonctions privées de construction de chaque section
@@ -331,7 +338,7 @@ def generate_report(
             ou dict équivalent.
 
     Returns:
-        Dict structuré contenant toutes les sections du rapport.
+        ReportResult typé contenant toutes les sections du rapport.
     """
     typed_simulation, typed_analysis = _normalize_configs(
         simulation_config, analysis_config
@@ -367,22 +374,10 @@ def generate_report(
     # — Corrélations —
     top_correlations, corr_pairs = _build_correlations_section(df, numeric_cols, warnings)
 
-    report = {
-        "dataset_summary": {
-            "n_rows": n_rows,
-            "n_columns": len(df.columns),
-            "numeric_columns": numeric_cols,
-        },
-        "validation": validation,
-        "profiling": profiling,
-        "anomalies": anomalies,
-        "top_correlations": top_correlations,
-        "warnings": warnings,
-    }
-
     # — Simulation (optionnelle) —
+    sim_dict: dict | None = None
     if typed_simulation is not None:
-        report["simulation"] = _build_simulation_section(
+        sim_dict = _build_simulation_section(
             df, typed_simulation, n_rows, warnings
         )
 
@@ -390,16 +385,28 @@ def generate_report(
     _build_seasonality_warnings(df, corr_pairs, warnings)
 
     # — R9 : Score d'exploitabilité synthétique —
-    sim_r_squared = report.get("simulation", {}).get("model_r_squared")
+    sim_r_squared = (sim_dict or {}).get("model_r_squared")
     exploitability = _compute_exploitability_score(
         n_rows=n_rows,
         n_warnings=len(warnings),
         n_anomaly_cols=len(anomalies),
         r_squared=sim_r_squared,
     )
-    report["exploitability"] = exploitability
 
-    return report
+    return ReportResult(
+        dataset_summary=DatasetSummary(
+            n_rows=n_rows,
+            n_columns=len(df.columns),
+            numeric_columns=numeric_cols,
+        ),
+        validation=validation,
+        profiling=profiling,
+        anomalies=anomalies,
+        top_correlations=top_correlations,
+        warnings=warnings,
+        exploitability=exploitability,
+        simulation=sim_dict,
+    )
 
 
 def _extract_top_correlations(pairs: list, top_n: int = 5) -> list:
@@ -408,23 +415,31 @@ def _extract_top_correlations(pairs: list, top_n: int = 5) -> list:
 
 
 
-def render_text_summary(report: dict) -> str:
+def render_text_summary(report: ReportResult) -> str:
+    """Génère un résumé textuel lisible du rapport.
+
+    Args:
+        report: ReportResult typé issu de generate_report.
+
+    Returns:
+        Résumé texte multi-lignes.
+    """
     lines = []
-    ds = report["dataset_summary"]
-    lines.append(f"📊 Résumé du dataset : {ds['n_rows']} lignes, {ds['n_columns']} colonnes.")
+    ds = report.dataset_summary
+    lines.append(f"📊 Résumé du dataset : {ds.n_rows} lignes, {ds.n_columns} colonnes.")
 
-    if report["validation"]["duplicates_count"] > 0:
-        lines.append(f"⚠️ {report['validation']['duplicates_count']} doublon(s) détecté(s).")
+    if report.validation["duplicates_count"] > 0:
+        lines.append(f"⚠️ {report.validation['duplicates_count']} doublon(s) détecté(s).")
 
-    if report["top_correlations"]:
-        top = report["top_correlations"][0]
+    if report.top_correlations:
+        top = report.top_correlations[0]
         lines.append(
             f"🔎 Corrélation la plus forte : {top['column_a']} ↔ {top['column_b']} "
             f"({top['value']:.2f}). Rappel : corrélation n'implique pas causalité."
         )
 
-    if "simulation" in report:
-        sim = report["simulation"]
+    if report.simulation is not None:
+        sim = report.simulation
         if sim.get("change_pct_reliable", True):
             lines.append(
                 f"💡 Simulation sur '{sim['feature']}' : "
@@ -440,14 +455,22 @@ def render_text_summary(report: dict) -> str:
                 f"qu'au pourcentage."
             )
 
-    for w in report["warnings"]:
+    for w in report.warnings:
         lines.append(f"⚠️ {w}")
 
     return "\n".join(lines)
 
 
-def render_html(report: dict) -> str:
-    ds = report["dataset_summary"]
+def render_html(report: ReportResult) -> str:
+    """Génère un rapport HTML à partir du ReportResult.
+
+    Args:
+        report: ReportResult typé issu de generate_report.
+
+    Returns:
+        Document HTML complet.
+    """
+    ds = report.dataset_summary
     # Échappement systématique de toute donnée dérivée du fichier importé
     # (noms de colonnes notamment) - ces valeurs viennent d'un upload
     # utilisateur non fiable et ne doivent jamais être injectées telles
@@ -460,7 +483,7 @@ def render_html(report: dict) -> str:
         f"<tr><td>{html.escape(str(c['column_a']))}</td>"
         f"<td>{html.escape(str(c['column_b']))}</td>"
         f"<td>{c['value']:.3f}</td></tr>"
-        for c in report["top_correlations"]
+        for c in report.top_correlations
     )
 
     return f"""<!DOCTYPE html>
@@ -468,7 +491,7 @@ def render_html(report: dict) -> str:
 <head><meta charset="utf-8"><title>Rapport Decision Core</title></head>
 <body>
 <h1>Rapport d'analyse</h1>
-<p>{ds['n_rows']} lignes, {ds['n_columns']} colonnes.</p>
+<p>{ds.n_rows} lignes, {ds.n_columns} colonnes.</p>
 <h2>Synthèse</h2>
 <p>{text_summary}</p>
 <h2>Corrélations principales</h2>

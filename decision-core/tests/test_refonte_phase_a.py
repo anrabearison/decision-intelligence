@@ -395,13 +395,13 @@ class TestScoreExploitabilite:
     def test_compute_exploitability_score_logic(self):
         """_compute_exploitability_score retourne les niveaux attendus."""
         green = _compute_exploitability_score(50, 0, 0, 0.9)
-        assert green["level"] == "green"
+        assert green.level == "green"
 
         red = _compute_exploitability_score(5, 5, 3, 0.05)
-        assert red["level"] == "red"
+        assert red.level == "red"
 
     def test_low_r_squared_downgrades_score(self):
         """Un R² très faible pénalise le score d'exploitabilité."""
         good = _compute_exploitability_score(50, 1, 0, 0.9)
         bad = _compute_exploitability_score(50, 1, 0, 0.02)
-        assert bad["score"] < good["score"]
+        assert bad.score < good.score

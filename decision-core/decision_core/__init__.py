@@ -32,6 +32,9 @@ from decision_core.models import (
     SimpleRegressionResult,
     MultivariateRegressionResult,
     AnomalyDetectionResult,
+    DatasetSummary,
+    ExploitabilityScore,
+    ReportResult,
 )
 
 __all__ = [
@@ -74,4 +77,7 @@ __all__ = [
     "SimpleRegressionResult",
     "MultivariateRegressionResult",
     "AnomalyDetectionResult",
+    "DatasetSummary",
+    "ExploitabilityScore",
+    "ReportResult",
 ]

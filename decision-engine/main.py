@@ -233,6 +233,7 @@ async def analyze(
         simulation_config=simulation_config,
         analysis_config=analysis_config,
     )
-    return report
+    return report.to_dict()
+
 
 
