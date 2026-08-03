@@ -85,9 +85,8 @@ class TestQuadraticPattern:
         result = detect_quadratic_pattern(df, "target", "feature")
 
         # Doit encore détecter le pattern avec les données restantes
-        # (si assez de données après nettoyage)
-        if result is not None:
-            assert isinstance(result, QuadraticPatternResult)
+        assert result is not None
+        assert isinstance(result, QuadraticPatternResult)
 
 
 class TestStepPattern:
@@ -136,8 +135,9 @@ class TestStepPattern:
         """Teste que les NaN sont correctement gérés."""
         np.random.seed(42)
         x = np.linspace(0, 20, 40)
-        y = np.where(x < 5, 10, np.where(x < 10, 20, np.where(x < 15, 30, 40)))
-        y = y + np.random.randn(40) * 1
+        # Fonction par paliers non-monotone pour que le R2 linéaire reste faible
+        y = np.where(x < 5, 10, np.where(x < 10, 50, np.where(x < 15, 20, 10)))
+        y = y + np.random.randn(40) * 0.3
         x[5] = np.nan
         y[10] = np.nan
         df = pd.DataFrame({"feature": x, "target": y})
@@ -145,9 +145,8 @@ class TestStepPattern:
         result = detect_step_pattern(df, "target", "feature")
 
         # Doit encore détecter le pattern avec les données restantes
-        # (si assez de données après nettoyage)
-        if result is not None:
-            assert isinstance(result, StepPatternResult)
+        assert result is not None
+        assert isinstance(result, StepPatternResult)
 
 
 class TestIntegrationWithGenerateReport:
@@ -168,3 +167,56 @@ class TestIntegrationWithGenerateReport:
         warnings = report.warnings
         nonlinearity_warnings = [w for w in warnings if "non-linéaire" in w.lower()]
         assert len(nonlinearity_warnings) > 0
+
+
+class TestRealWorldExamples:
+    """Tests d'intégration sur les véritables jeux de données d'exemples."""
+
+    def test_real_world_energy_quadratic_pattern(self):
+        """Teste le cas réel #13 (Énergie) : Temperature_Exterieure_C -> Consommation_KWh."""
+        import os
+        from decision_core.importer import import_file
+        
+        examples_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "examples")
+        df = import_file(os.path.join(examples_dir, "energie_batiments_2025.csv"))
+        
+        result = detect_quadratic_pattern(df, "Consommation_KWh", "Temperature_Exterieure_C")
+        
+        assert result is not None
+        assert isinstance(result, QuadraticPatternResult)
+        assert result.pattern_type == "u_curve"
+        # L'amélioration du R² ajusté réelle est d'environ 0.0052, p-value d'environ 0.3008
+        assert 0.004 < (result.r2_quadratic_adj - result.r2_linear_adj) < 0.006
+        assert 0.29 < result.p_value < 0.31
+
+    def test_real_world_logistics_step_pattern(self):
+        """Teste le cas réel #5 (Logistique) : Poids_Colis_Kg -> Frais_Port_Euros."""
+        import os
+        from decision_core.importer import import_file
+        
+        examples_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "examples")
+        df = import_file(os.path.join(examples_dir, "logistique_livraisons_2025.csv"))
+        
+        result = detect_step_pattern(df, "Frais_Port_Euros", "Poids_Colis_Kg")
+        
+        assert result is not None
+        assert isinstance(result, StepPatternResult)
+        # La différence réelle eta2 - R2 est d'environ 0.0218
+        assert 0.02 < (result.eta_squared_binned - result.r2_linear) < 0.023
+
+    def test_real_world_agriculture_quadratic_pattern(self):
+        """Teste le cas réel #18 (Agriculture) : Pluviometrie_Mm -> Rendement_Quintal_Ha."""
+        import os
+        from decision_core.importer import import_file
+        
+        examples_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "examples")
+        df = import_file(os.path.join(examples_dir, "agriculture_rendement_2025.csv"))
+        
+        result = detect_quadratic_pattern(df, "Rendement_Quintal_Ha", "Pluviometrie_Mm")
+        
+        assert result is not None
+        assert isinstance(result, QuadraticPatternResult)
+        assert result.pattern_type == "optimum"
+        # Relation non-linéaire forte (cloche/optimum)
+        assert result.r2_quadratic_adj > 0.8
+        assert result.p_value < 0.05

@@ -3,8 +3,10 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+.coverage
 .venv/
 venv/
+scratch/
 
 # Node (futur frontend/backend)
 node_modules/

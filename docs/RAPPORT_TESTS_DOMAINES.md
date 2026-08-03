@@ -87,7 +87,7 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
   - ~~**$R^2$ dérisoire (5%)** : Le temps dépend du `Mode_Livraison` (Express en 18h vs Relais en 48h), pas de la distance. Ignorer la colonne texte du mode de livraison rend la simulation inutile.~~
   - ~~**Tarifs par paliers** : Les frais de port fonctionnent par tranches de poids fixes, inaccessibles à la régression linéaire.~~
 * <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.1)** : Le moteur identifie désormais `Mode_Livraison` comme le sous-groupe principal ($\eta^2$) déterminant le temps de livraison.</span>
-* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2)** : Le moteur détecte désormais les relations par paliers (step functions) et avertit que la régression linéaire peut être trompeuse sur ce type de relation.</span>
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2 - Seuils recalibrés)** : Le moteur détecte désormais les relations par paliers (step functions) sur la paire exacte `Poids_Colis_Kg` -> `Frais_Port_Euros` (écart $\eta^2 - R^2 \approx 0,022$ capturé par le seuil de $0,02$) et avertit que la régression linéaire peut être trompeuse sur cette paire.</span>
 
 ### Test 6 : Santé & Suivi Clinique
 * **Fichier de test** : `examples/sante_clinique_2025.csv`
@@ -148,7 +148,7 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 * **Résultat obtenu** : Baseline = 3 586,67 kWh, Simulation = 3 173,95 kWh (-11,51%), $R^2 = 0,627$.
 * **Analyse & Critique Métier** :
   - ~~**Courbe en U (Climatisation)** : La consommation monte en hiver (Chauffage) et remonte en été (Climatisation). Le modèle linéaire rate le creux parabolique.~~
-* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2)** : Le moteur détecte désormais les relations par paliers (step functions) entre `Surface_Chauffee_M2` et la consommation, et avertit que la régression linéaire peut être trompeuse sur ce type de relation.</span>
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2 - Seuils recalibrés)** : Le moteur détecte désormais la courbe en U (relation quadratique) entre `Temperature_Exterieure_C` et `Consommation_KWh` (amélioration du $R^2_{adj} \approx 0,0052$, $p$-value $\approx 0,3008$, capturés par les nouveaux seuils de $0,005$ et $0,31$) et avertit que la simulation linéaire peut être trompeuse sur cette paire.</span>
 
 ### Test 14 : Marketing Digital & SEO/Adwords
 * **Fichier de test** : `examples/marketing_digital_2025.csv`

@@ -73,6 +73,7 @@ def detect_significant_subgroups(
     if not pd.api.types.is_numeric_dtype(df[target]):
         return []
     
+    from decision_core.stats.anova import compute_eta_squared
     significant_subgroups = []
     
     for col in df.columns:
@@ -83,23 +84,11 @@ def detect_significant_subgroups(
         if pd.api.types.is_string_dtype(df[col]) or df[col].dtype == 'object':
             unique_count = df[col].nunique()
             if unique_count <= 10 and unique_count > 1:
-                # Calcul de l'eta-carré (one-way ANOVA)
-                groups = df.groupby(col)[target]
-                
-                # Somme des carrés totaux (SST)
-                overall_mean = df[target].mean()
-                sst = np.sum((df[target] - overall_mean) ** 2)
-                
-                if sst == 0:
-                    continue
-                
-                # Somme des carrés entre groupes (SSB)
-                ssb = np.sum(groups.count() * (groups.mean() - overall_mean) ** 2)
-                
-                # Eta-carré
-                eta_squared = ssb / sst
+                # Calcul de l'eta-carré (one-way ANOVA) via fonction utilitaire
+                eta_squared = compute_eta_squared(df[target], df[col])
                 
                 if eta_squared >= threshold_eta_squared:
+                    groups = df.groupby(col)[target]
                     significant_subgroups.append({
                         "column": col,
                         "eta_squared": eta_squared,

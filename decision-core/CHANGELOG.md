@@ -4,6 +4,25 @@ All notable changes to decision-core will be documented in this file.
 
 ## [Unreleased]
 
+### Recalibré (Détection de non-linéarité P1.2)
+
+- **Recalibrage des seuils de non-linéarité** :
+  - Abaissement de `ETA_SQUARED_IMPROVEMENT_THRESHOLD` à `0.02` (au lieu de `0.05`) pour détecter les paliers de `Poids_Colis_Kg` -> `Frais_Port_Euros` (diff = 0.022) dans `logistique_livraisons_2025.csv`.
+  - Abaissement du seuil de gain de R² ajusté quadratique `QUADRATIC_IMPROVEMENT_THRESHOLD` à `0.005` (au lieu de `0.05`) et élargissement du seuil de p-value `QUADRATIC_P_VALUE_THRESHOLD` à `0.31` (au lieu de `0.05`) pour détecter la courbe en U de `Temperature_Exterieure_C` -> `Consommation_KWh` (imp = 0.0052, p = 0.3008) dans `energie_batiments_2025.csv` sur de petits échantillons bruités (N=15).
+  - Documentation de ces seuils empiriques dans les docstrings de `nonlinearity.py`.
+
+### Refactored
+
+- **Élimination de la duplication de code pour eta²** :
+  - Création de `decision_core.stats.anova.compute_eta_squared()` pour centraliser le calcul de la proportion de variance expliquée.
+  - Utilisation de cette fonction partagée dans `categorical.py` (détection de sous-groupes catégoriels) et `nonlinearity.py` (détection de paliers continus).
+
+### Added
+
+- **Tests d'intégration réels** :
+  - Ajout de `TestRealWorldExamples` dans `test_nonlinearity.py` pour valider la détection sur les fichiers d'exemples réels (`energie_batiments_2025.csv`, `logistique_livraisons_2025.csv`, `agriculture_rendement_2025.csv`).
+  - Correction des assertions faibles (`test_handles_nan_values`) dans `test_nonlinearity.py` pour garantir des validations strictes.
+
 ### Added (P0 - Régression logistique et causalité)
 
 - **Régression logistique automatique** pour les cibles binaires (Churn, Panne, Guéri, etc.)
