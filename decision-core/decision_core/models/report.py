@@ -33,7 +33,7 @@ class ExploitabilityScore:
         return asdict(self)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ReportResult:
     """Résultat typé complet de generate_report.
 
