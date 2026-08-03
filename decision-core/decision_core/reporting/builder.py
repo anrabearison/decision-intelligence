@@ -8,6 +8,9 @@ from decision_core.stats.profiling import (
     correlation_pvalues,
     legitimate_numeric_columns,
 )
+from decision_core.stats.derived_columns import detect_derived_relationships
+from decision_core.stats.regression import detect_confounders
+from decision_core.stats.categorical import detect_significant_subgroups
 from decision_core.quality.anomaly_detection import detect_anomalies_iqr
 from decision_core.simulation import simulate_scenario
 from decision_core.models import (
@@ -206,13 +209,11 @@ def generate_report(
         )
 
     # — Corrélations —
-    from decision_core.stats.derived_columns import detect_derived_relationships
     derived_relationships = detect_derived_relationships(df, numeric_cols)
     top_correlations, corr_pairs = _build_correlations_section(df, numeric_cols, derived_relationships)
     _build_correlation_warnings(df, numeric_cols, corr_pairs, derived_relationships, warnings)
     
     # Détection des facteurs confondants pour les corrélations principales
-    from decision_core.stats.regression import detect_confounders
     for corr in top_correlations[:3]:  # Vérifier les 3 premières corrélations
         confounders = detect_confounders(df, corr['column_a'], corr['column_b'])
         if confounders:
@@ -224,7 +225,6 @@ def generate_report(
     
     # Détection des sous-groupes significatifs (seulement si des colonnes numériques existent)
     if numeric_cols:
-        from decision_core.stats.categorical import detect_significant_subgroups
         significant_subgroups = detect_significant_subgroups(df, numeric_cols[0])
         for subgroup in significant_subgroups:
             warnings.append(
