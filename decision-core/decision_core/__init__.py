@@ -29,7 +29,8 @@ from decision_core.models import (
     SimulationConfig,
     SimulationResult,
     AnalysisConfig,
-    RegressionResult,
+    SimpleRegressionResult,
+    MultivariateRegressionResult,
     AnomalyDetectionResult,
 )
 
@@ -70,6 +71,7 @@ __all__ = [
     "SimulationConfig",
     "SimulationResult",
     "AnalysisConfig",
-    "RegressionResult",
+    "SimpleRegressionResult",
+    "MultivariateRegressionResult",
     "AnomalyDetectionResult",
 ]

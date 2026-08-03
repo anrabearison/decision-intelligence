@@ -4,8 +4,8 @@ Encapsule les paramètres et résultats de simulation, régression, et
 détection d'anomalies dans des Dataclasses pour assurer la clarté de l'API
 et simplifier la maintenance.
 """
-from dataclasses import dataclass, field, asdict
-from typing import Any
+from dataclasses import dataclass, field, fields, asdict
+from typing import Any, Mapping
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,13 @@ class SimulationConfig:
                     f"La borne inférieure ne peut pas être supérieure à la borne supérieure."
                 )
 
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, Any]) -> "SimulationConfig":
+        """Crée une instance à partir d'un mapping (ex: dict) en filtrant les clés inconnues."""
+        valid_keys = {f.name for f in fields(cls)}
+        filtered = {k: v for k, v in mapping.items() if k in valid_keys}
+        return cls(**filtered)
+
 
 @dataclass(frozen=True)
 class AnalysisConfig:
@@ -37,22 +44,41 @@ class AnalysisConfig:
         if self.iqr_k <= 0:
             raise ValueError(f"iqr_k doit être strictement supérieur à 0 (valeur fournie : {self.iqr_k}).")
 
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, Any]) -> "AnalysisConfig":
+        """Crée une instance à partir d'un mapping (ex: dict) en filtrant les clés inconnues."""
+        valid_keys = {f.name for f in fields(cls)}
+        filtered = {k: v for k, v in mapping.items() if k in valid_keys}
+        return cls(**filtered)
+
 
 @dataclass(frozen=True)
-class RegressionResult:
-    """Encapsule les résultats d'une régression simple ou multivariée."""
+class SimpleRegressionResult:
+    """Encapsule les résultats d'une régression linéaire simple."""
     target: str
+    feature: str
     r_squared: float
     intercept: float
-    slope: float | None = None  # Présent uniquement en régression simple
-    feature: str | None = None  # Présent uniquement en régression simple
-    coefficients: dict[str, float] | None = None  # Présent uniquement en régression multivariée
-    condition_number: float | None = None
-    multicollinearity_warning: bool | None = None
+    slope: float
 
     def to_dict(self) -> dict[str, Any]:
         """Convertit l'objet en dictionnaire brut pour compatibilité JSON/FastAPI."""
-        return {k: v for k, v in asdict(self).items() if v is not None}
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class MultivariateRegressionResult:
+    """Encapsule les résultats d'une régression linéaire multivariée."""
+    target: str
+    r_squared: float
+    intercept: float
+    coefficients: dict[str, float]
+    condition_number: float
+    multicollinearity_warning: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convertit l'objet en dictionnaire brut pour compatibilité JSON/FastAPI."""
+        return asdict(self)
 
 
 @dataclass(frozen=True)

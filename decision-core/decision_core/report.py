@@ -9,8 +9,8 @@ chaque corrélation forte affichée rappelle explicitement que
 corrélation n'est pas causalité.
 """
 import html
-import itertools
 import re
+
 import pandas as pd
 
 from decision_core.validation import validate_dataset
@@ -23,7 +23,8 @@ from decision_core.profiling import (
 from decision_core.anomaly_detection import detect_anomalies_iqr, MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.simulation import simulate_scenario
 from decision_core.influence_detection import detect_influential_points
-from decision_core.regression import _validate_regression_inputs
+from decision_core.regression import validate_regression_inputs
+
 from decision_core.derived_columns import detect_derived_relationships
 from decision_core.models import SimulationConfig, AnalysisConfig
 
@@ -123,32 +124,15 @@ def _compute_exploitability_score(
     return {"level": level, "score": score, "summary": summary}
 
 
-def generate_report(
-    df: pd.DataFrame,
-    simulation_config: SimulationConfig | dict | None = None,
-    analysis_config: AnalysisConfig | dict | None = None,
-) -> dict:
-    """Génère le rapport d'analyse complet du DataFrame.
-
-    Args:
-        df: DataFrame source (issu de import_file).
-        simulation_config: Configuration de simulation typée SimulationConfig
-            ou dict équivalent.
-        analysis_config: Configuration d'analyse typée AnalysisConfig
-            ou dict équivalent.
-
-    Returns:
-        Dict structuré.
-    """
-    # Rétrocompatibilité et application des règles POO de validation statique
-    import inspect
-    typed_analysis: AnalysisConfig
+def _normalize_configs(
+    simulation_config: SimulationConfig | dict | None,
+    analysis_config: AnalysisConfig | dict | None,
+) -> tuple[SimulationConfig | None, AnalysisConfig]:
+    """Normalise les configurations : accepte dict ou dataclass, retourne dataclass."""
     if isinstance(analysis_config, AnalysisConfig):
         typed_analysis = analysis_config
     elif isinstance(analysis_config, dict):
-        valid_keys = inspect.signature(AnalysisConfig).parameters.keys()
-        filtered_analysis = {k: v for k, v in analysis_config.items() if k in valid_keys}
-        typed_analysis = AnalysisConfig(**filtered_analysis)
+        typed_analysis = AnalysisConfig.from_mapping(analysis_config)
     else:
         typed_analysis = AnalysisConfig()
 
@@ -156,41 +140,24 @@ def generate_report(
     if isinstance(simulation_config, SimulationConfig):
         typed_simulation = simulation_config
     elif isinstance(simulation_config, dict):
-        valid_keys = inspect.signature(SimulationConfig).parameters.keys()
-        filtered_simulation = {k: v for k, v in simulation_config.items() if k in valid_keys}
-        typed_simulation = SimulationConfig(**filtered_simulation)
+        typed_simulation = SimulationConfig.from_mapping(simulation_config)
+
+    return typed_simulation, typed_analysis
 
 
-    warnings = []
-    n_rows = len(df)
-
-    if n_rows < SMALL_SAMPLE_THRESHOLD:
-        warnings.append(
-            f"Échantillon petit ({n_rows} lignes) : les résultats statistiques "
-            f"(corrélations, détection d'anomalies, régression) sont indicatifs, "
-            f"pas robustes. Recommandé : {SMALL_SAMPLE_THRESHOLD}+ lignes."
-        )
-
-    validation = validate_dataset(df)
-
-    numeric_cols = legitimate_numeric_columns(df)
-    profiling = {col: descriptive_stats(df[col]) for col in numeric_cols}
-
-    if not numeric_cols:
-        warnings.append(
-            "Aucune colonne numérique exploitable détectée dans ce "
-            "fichier : statistiques, corrélations, détection d'anomalies "
-            "et simulation ne peuvent pas être calculées. Vérifiez que "
-            "vos colonnes numériques sont bien reconnues comme telles "
-            "(voir les limites de détection dans la documentation)."
-        )
-
-    # Détection d'anomalies (IQR) par colonne numérique
-    anomalies = {}
+def _build_anomalies_section(
+    df: pd.DataFrame,
+    numeric_cols: list[str],
+    iqr_k: float,
+    warnings: list[str],
+) -> dict:
+    """Détecte les anomalies IQR par colonne numérique et enrichit les warnings."""
+    anomalies: dict = {}
     for col in numeric_cols:
-        result = detect_anomalies_iqr(df[col], k=typed_analysis.iqr_k)
+        result = detect_anomalies_iqr(df[col], k=iqr_k)
         if result.indices and result.reliable:
             anomalies[col] = result.to_dict()
+
     if anomalies:
         cols_with_anomalies = ", ".join(anomalies.keys())
         total_anomalies = sum(len(a["indices"]) for a in anomalies.values())
@@ -203,6 +170,19 @@ def generate_report(
             f"affichés."
         )
 
+    return anomalies
+
+
+def _build_correlations_section(
+    df: pd.DataFrame,
+    numeric_cols: list[str],
+    warnings: list[str],
+) -> tuple[list, list]:
+    """Calcule corrélations, filtre les relations dérivées, enrichit les warnings.
+
+    Returns:
+        Tuple (top_correlations, corr_pairs) pour réutilisation en aval.
+    """
     corr_pairs = correlation_pvalues(df)
 
     derived_relationships = detect_derived_relationships(df, numeric_cols)
@@ -245,76 +225,75 @@ def generate_report(
             f"sa seule valeur."
         )
 
-    report = {
-        "dataset_summary": {
-            "n_rows": n_rows,
-            "n_columns": len(df.columns),
-            "numeric_columns": numeric_cols,
-        },
-        "validation": validation,
-        "profiling": profiling,
-        "anomalies": anomalies,
-        "top_correlations": top_correlations,
-        "warnings": warnings,
-    }
+    return top_correlations, corr_pairs
 
-    if typed_simulation is not None:
-        simulation = simulate_scenario(
-            df,
-            target=typed_simulation.target,
-            feature=typed_simulation.feature,
-            change_pct=typed_simulation.change_pct,
-            baseline_feature_value=typed_simulation.baseline_feature_value,
-            bounds=typed_simulation.bounds,
-        )
-        report["simulation"] = simulation.to_dict()
 
-        # L'avertissement "échantillon petit" plus haut porte sur la taille
-        # globale du dataset - insuffisant si les colonnes utilisées par
-        # CETTE simulation ont beaucoup de valeurs manquantes (un dataset
-        # de 40 lignes peut n'avoir que 5 valeurs valides sur X et Y).
-        effective_sample = _validate_regression_inputs(
-            df, [typed_simulation.feature, typed_simulation.target]
-        )
-        effective_n = len(effective_sample)
-        if effective_n < n_rows and effective_n < SMALL_SAMPLE_THRESHOLD:
-            warnings.append(
-                f"Échantillon effectif réduit pour cette simulation : "
-                f"seulement {effective_n} lignes valides sur "
-                f"'{typed_simulation.feature}' et "
-                f"'{typed_simulation.target}' (sur {n_rows} au total), "
-                f"après retrait des valeurs manquantes - résultats "
-                f"indicatifs, pas robustes."
-            )
+def _build_simulation_section(
+    df: pd.DataFrame,
+    typed_simulation: SimulationConfig,
+    n_rows: int,
+    warnings: list[str],
+) -> dict:
+    """Exécute la simulation, enrichit les warnings, retourne le dict résultat."""
+    simulation = simulate_scenario(
+        df,
+        target=typed_simulation.target,
+        feature=typed_simulation.feature,
+        change_pct=typed_simulation.change_pct,
+        baseline_feature_value=typed_simulation.baseline_feature_value,
+        bounds=typed_simulation.bounds,
+    )
+    sim_dict = simulation.to_dict()
 
-        if simulation.model_r_squared < LOW_R_SQUARED_THRESHOLD:
-            warnings.append(
-                f"R² faible ({simulation.model_r_squared:.2f}) pour la "
-                f"simulation sur '{typed_simulation.feature}' : le modèle "
-                f"explique moins de {int(LOW_R_SQUARED_THRESHOLD*100)}% de "
-                f"la variance de '{typed_simulation.target}' - la projection "
-                f"est peu fiable, à interpréter avec beaucoup de prudence."
-            )
-
-        influence = detect_influential_points(
-            df, feature=typed_simulation.feature, target=typed_simulation.target
+    # Vérification de l'échantillon effectif (post-dropna sur les colonnes
+    # utilisées) — un dataset de 40 lignes peut n'avoir que 5 valeurs
+    # valides sur X et Y.
+    effective_sample = validate_regression_inputs(
+        df, [typed_simulation.feature, typed_simulation.target]
+    )
+    effective_n = len(effective_sample)
+    if effective_n < n_rows and effective_n < SMALL_SAMPLE_THRESHOLD:
+        warnings.append(
+            f"Échantillon effectif réduit pour cette simulation : "
+            f"seulement {effective_n} lignes valides sur "
+            f"'{typed_simulation.feature}' et "
+            f"'{typed_simulation.target}' (sur {n_rows} au total), "
+            f"après retrait des valeurs manquantes - résultats "
+            f"indicatifs, pas robustes."
         )
 
-        if influence["indices"]:
-            warnings.append(
-                f"Point(s) influent(s) détecté(s) (ligne(s) "
-                f"{influence['indices']}) : ce résultat dépend fortement "
-                f"d'un ou plusieurs points spécifiques - une corrélation "
-                f"ou une régression peut être largement déformée par un "
-                f"seul point atypique. Vérifier ces valeurs avant de "
-                f"s'y fier."
-            )
+    if simulation.model_r_squared < LOW_R_SQUARED_THRESHOLD:
+        warnings.append(
+            f"R² faible ({simulation.model_r_squared:.2f}) pour la "
+            f"simulation sur '{typed_simulation.feature}' : le modèle "
+            f"explique moins de {int(LOW_R_SQUARED_THRESHOLD*100)}% de "
+            f"la variance de '{typed_simulation.target}' - la projection "
+            f"est peu fiable, à interpréter avec beaucoup de prudence."
+        )
 
-    # R8 — Warning saisonnalité : si une colonne temporelle est détectée
-    # ET qu'il existe des corrélations fortes, alerter sur le risque
-    # d'inversion de causalité liée à la saisonnalité.
-    # IMPORTANT : R8 doit être exécuté AVANT R9 pour que le warning
-    # saisonnalité soit pris en compte dans le score d'exploitabilité.
+    influence = detect_influential_points(
+        df, feature=typed_simulation.feature, target=typed_simulation.target
+    )
+    if influence["indices"]:
+        warnings.append(
+            f"Point(s) influent(s) détecté(s) (ligne(s) "
+            f"{influence['indices']}) : ce résultat dépend fortement "
+            f"d'un ou plusieurs points spécifiques - une corrélation "
+            f"ou une régression peut être largement déformée par un "
+            f"seul point atypique. Vérifier ces valeurs avant de "
+            f"s'y fier."
+        )
+
+    return sim_dict
+
+
+def _build_seasonality_warnings(
+    df: pd.DataFrame,
+    corr_pairs: list,
+    warnings: list[str],
+) -> None:
+    """R8 — Ajoute un warning si des colonnes temporelles + corrélations fortes
+    sont détectées, signalant un risque de confusion saisonnière."""
     temporal_cols = _detect_temporal_columns(df)
     if temporal_cols:
         strong_corrs = [
@@ -333,9 +312,84 @@ def generate_report(
                 f"analyse par période avant de tirer des conclusions."
             )
 
-    # R9 — Score d'exploitabilité synthétique.
-    # Calculé après R8 pour que le warning saisonnalité soit inclus
-    # dans le décompte n_warnings utilisé par le score.
+
+def generate_report(
+    df: pd.DataFrame,
+    simulation_config: SimulationConfig | dict | None = None,
+    analysis_config: AnalysisConfig | dict | None = None,
+) -> dict:
+    """Génère le rapport d'analyse complet du DataFrame.
+
+    Orchestre les sous-fonctions privées de construction de chaque section
+    du rapport (anomalies, corrélations, simulation, saisonnalité, exploitabilité).
+
+    Args:
+        df: DataFrame source (issu de import_file).
+        simulation_config: Configuration de simulation typée SimulationConfig
+            ou dict équivalent.
+        analysis_config: Configuration d'analyse typée AnalysisConfig
+            ou dict équivalent.
+
+    Returns:
+        Dict structuré contenant toutes les sections du rapport.
+    """
+    typed_simulation, typed_analysis = _normalize_configs(
+        simulation_config, analysis_config
+    )
+
+    warnings: list[str] = []
+    n_rows = len(df)
+
+    if n_rows < SMALL_SAMPLE_THRESHOLD:
+        warnings.append(
+            f"Échantillon petit ({n_rows} lignes) : les résultats statistiques "
+            f"(corrélations, détection d'anomalies, régression) sont indicatifs, "
+            f"pas robustes. Recommandé : {SMALL_SAMPLE_THRESHOLD}+ lignes."
+        )
+
+    validation = validate_dataset(df)
+
+    numeric_cols = legitimate_numeric_columns(df)
+    profiling = {col: descriptive_stats(df[col]) for col in numeric_cols}
+
+    if not numeric_cols:
+        warnings.append(
+            "Aucune colonne numérique exploitable détectée dans ce "
+            "fichier : statistiques, corrélations, détection d'anomalies "
+            "et simulation ne peuvent pas être calculées. Vérifiez que "
+            "vos colonnes numériques sont bien reconnues comme telles "
+            "(voir les limites de détection dans la documentation)."
+        )
+
+    # — Anomalies —
+    anomalies = _build_anomalies_section(df, numeric_cols, typed_analysis.iqr_k, warnings)
+
+    # — Corrélations —
+    top_correlations, corr_pairs = _build_correlations_section(df, numeric_cols, warnings)
+
+    report = {
+        "dataset_summary": {
+            "n_rows": n_rows,
+            "n_columns": len(df.columns),
+            "numeric_columns": numeric_cols,
+        },
+        "validation": validation,
+        "profiling": profiling,
+        "anomalies": anomalies,
+        "top_correlations": top_correlations,
+        "warnings": warnings,
+    }
+
+    # — Simulation (optionnelle) —
+    if typed_simulation is not None:
+        report["simulation"] = _build_simulation_section(
+            df, typed_simulation, n_rows, warnings
+        )
+
+    # — R8 : Saisonnalité (avant R9 pour intégrer le warning au score) —
+    _build_seasonality_warnings(df, corr_pairs, warnings)
+
+    # — R9 : Score d'exploitabilité synthétique —
     sim_r_squared = report.get("simulation", {}).get("model_r_squared")
     exploitability = _compute_exploitability_score(
         n_rows=n_rows,
@@ -351,6 +405,7 @@ def generate_report(
 def _extract_top_correlations(pairs: list, top_n: int = 5) -> list:
     sorted_pairs = sorted(pairs, key=lambda p: abs(p["value"]), reverse=True)
     return sorted_pairs[:top_n]
+
 
 
 def render_text_summary(report: dict) -> str:

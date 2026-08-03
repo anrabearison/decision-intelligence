@@ -26,6 +26,8 @@ Paramètres optionnels ajoutés (Phase 1a - refonte) :
 """
 from decision_core.regression import fit_simple_regression
 from decision_core.models import SimulationConfig, SimulationResult
+import pandas as pd
+
 
 # Si |baseline| est sous ce seuil relatif à l'écart-type de la cible,
 # un pourcentage de variation n'est pas jugé fiable.

@@ -6,13 +6,13 @@ sélection automatique fixe, pas de choix utilisateur de modèle
 
 Robustesse (voir README, section limites) : les valeurs manquantes,
 colonnes à variance nulle et échantillons trop petits sont détectés
-explicitement avant tout calcul, via _validate_regression_inputs -
+explicitement avant tout calcul, via validate_regression_inputs -
 jamais laissés fuiter en NaN silencieux ou en exception brute de scipy/numpy.
 """
 import numpy as np
 import pandas as pd
 from scipy import stats
-from decision_core.models import RegressionResult
+from decision_core.models import SimpleRegressionResult, MultivariateRegressionResult
 
 MIN_ROWS_FOR_REGRESSION = 3
 
@@ -34,7 +34,7 @@ class InsufficientDataError(ValueError):
     pass
 
 
-def _validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+def validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     """Vérifie et nettoie les colonnes utilisées par une régression.
 
     - Retire uniquement les lignes avec NaN sur les colonnes concernées
@@ -64,7 +64,7 @@ def _validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame
     return subset
 
 
-def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> RegressionResult:
+def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> SimpleRegressionResult:
     """Ajuste une régression linéaire simple entre deux variables.
 
     Args:
@@ -73,7 +73,7 @@ def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> Regres
         feature: Nom de la colonne feature (variable indépendante).
 
     Returns:
-        RegressionResult contenant slope, intercept, r_squared, feature, target.
+        SimpleRegressionResult contenant slope, intercept, r_squared, feature, target.
         Utilisez .to_dict() pour obtenir un dictionnaire plat si nécessaire.
 
     Raises:
@@ -85,22 +85,22 @@ def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> Regres
     if not pd.api.types.is_numeric_dtype(df[target]):
         raise TypeError(f"La colonne '{target}' doit être numérique pour une régression.")
 
-    clean = _validate_regression_inputs(df, [feature, target])
+    clean = validate_regression_inputs(df, [feature, target])
 
     x = clean[feature].values
     y = clean[target].values
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
 
-    return RegressionResult(
+    return SimpleRegressionResult(
         target=target,
+        feature=feature,
         r_squared=float(r_value ** 2),
         intercept=float(intercept),
         slope=float(slope),
-        feature=feature,
     )
 
 
-def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -> RegressionResult:
+def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -> MultivariateRegressionResult:
     """Ajuste une régression linéaire multivariée.
 
     Args:
@@ -109,7 +109,7 @@ def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -
         features: Liste des noms de colonnes features (variables indépendantes).
 
     Returns:
-        RegressionResult contenant intercept, coefficients, r_squared, target,
+        MultivariateRegressionResult contenant intercept, coefficients, r_squared, target,
         condition_number, multicollinearity_warning.
         Utilisez .to_dict() pour obtenir un dictionnaire plat si nécessaire.
 
@@ -121,7 +121,7 @@ def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -
         if not pd.api.types.is_numeric_dtype(df[f]):
             raise TypeError(f"La colonne '{f}' doit être numérique pour une régression.")
 
-    clean = _validate_regression_inputs(df, features + [target])
+    clean = validate_regression_inputs(df, features + [target])
 
     X = clean[features].values
     X_with_intercept = np.column_stack([np.ones(len(X)), X])
@@ -140,7 +140,7 @@ def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -
     X_standardized_with_intercept = np.column_stack([np.ones(len(X)), X_standardized])
     condition_number = float(np.linalg.cond(X_standardized_with_intercept))
 
-    return RegressionResult(
+    return MultivariateRegressionResult(
         target=target,
         r_squared=float(r_squared),
         intercept=intercept,
@@ -148,4 +148,3 @@ def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -
         condition_number=condition_number,
         multicollinearity_warning=condition_number > CONDITION_NUMBER_WARNING_THRESHOLD,
     )
-

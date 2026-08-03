@@ -13,7 +13,7 @@ jamais pour supprimer automatiquement un point (cohérent avec le
 principe déjà appliqué ailleurs : signaler, ne jamais corriger à la
 place de l'utilisateur).
 
-Réutilise fit_simple_regression / _validate_regression_inputs de
+Réutilise fit_simple_regression / validate_regression_inputs de
 regression.py plutôt que d'appeler scipy directement : hérite ainsi
 automatiquement des garde-fous NaN/variance nulle/échantillon
 insuffisant (une duplication de cette logique avait initialement
@@ -21,7 +21,8 @@ réintroduit les mêmes bugs corrigés dans regression.py - cf. commit).
 """
 import numpy as np
 import pandas as pd
-from decision_core.regression import fit_simple_regression, _validate_regression_inputs
+from decision_core.regression import fit_simple_regression, validate_regression_inputs
+
 
 # Seuil usuel en statistique appliquée pour signaler un point influent :
 # D_i > 4/n (Cook, 1977 ; convention largement utilisée en pratique).
@@ -41,7 +42,7 @@ def compute_cooks_distance(df: pd.DataFrame, feature: str, target: str) -> np.nd
     """
     # Même nettoyage (dropna, vérification de variance) que la régression
     # utilisée pour le modèle - garantit la cohérence entre les deux.
-    clean = _validate_regression_inputs(df, [feature, target])
+    clean = validate_regression_inputs(df, [feature, target])
     model = fit_simple_regression(clean, target=target, feature=feature)
 
     x = clean[feature].values.astype(float)
@@ -91,10 +92,11 @@ def detect_influential_points(
 
     # Les indices renvoyés sont ceux du DataFrame nettoyé (post-dropna),
     # pas nécessairement du df original si des lignes ont été retirées -
-    # cohérent avec le comportement de _validate_regression_inputs.
-    clean = _validate_regression_inputs(df, [feature, target])
+    # cohérent avec le comportement de validate_regression_inputs.
+    clean = validate_regression_inputs(df, [feature, target])
     indices = clean.index[cooks_d > threshold].tolist()
     max_distance_index = int(clean.index[np.argmax(cooks_d)])
+
 
     return {
         "indices": indices,
