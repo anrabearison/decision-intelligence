@@ -29,6 +29,16 @@ DEFAULT_THRESHOLD_RATIO = 4.0
 
 
 def compute_cooks_distance(df: pd.DataFrame, feature: str, target: str) -> np.ndarray:
+    """Calcule la distance de Cook pour chaque point d'une régression.
+
+    Args:
+        df: DataFrame pandas contenant les données.
+        feature: Nom de la colonne feature (variable indépendante).
+        target: Nom de la colonne cible (variable dépendante).
+
+    Returns:
+        Array numpy des distances de Cook pour chaque observation.
+    """
     # Même nettoyage (dropna, vérification de variance) que la régression
     # utilisée pour le modèle - garantit la cohérence entre les deux.
     clean = _validate_regression_inputs(df, [feature, target])
@@ -63,6 +73,18 @@ def compute_cooks_distance(df: pd.DataFrame, feature: str, target: str) -> np.nd
 def detect_influential_points(
     df: pd.DataFrame, feature: str, target: str, threshold_ratio: float = DEFAULT_THRESHOLD_RATIO
 ) -> dict:
+    """Détecte les points influents dans une régression linéaire.
+
+    Args:
+        df: DataFrame pandas contenant les données.
+        feature: Nom de la colonne feature (variable indépendante).
+        target: Nom de la colonne cible (variable dépendante).
+        threshold_ratio: Ratio pour le seuil de Cook (défaut 4.0).
+
+    Returns:
+        Dictionnaire contenant indices, n, threshold, max_distance,
+        max_distance_index.
+    """
     cooks_d = compute_cooks_distance(df, feature, target)
     n = len(cooks_d)
     threshold = threshold_ratio / n

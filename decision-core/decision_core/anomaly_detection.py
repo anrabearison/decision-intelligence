@@ -10,6 +10,22 @@ MIN_RELIABLE_SAMPLE_SIZE = 30
 
 
 def detect_anomalies_iqr(series: pd.Series, k: float = 1.5) -> AnomalyDetectionResult:
+    """Détecte les anomalies dans une série numérique via la méthode IQR.
+
+    Args:
+        series: Série pandas numérique à analyser.
+        k: Multiplicateur pour l'IQR (défaut 1.5, valeur usuelle de Tukey).
+
+    Returns:
+        AnomalyDetectionResult contenant les indices des anomalies,
+        les bornes, et un indicateur de fiabilité.
+
+    Raises:
+        TypeError: Si la série n'est pas numérique.
+        ValueError: Si k n'est pas strictement positif.
+    """
+    if k <= 0:
+        raise ValueError(f"Le multiplicateur k doit être strictement positif (valeur fournie : {k}).")
     if not pd.api.types.is_numeric_dtype(series):
         raise TypeError("La détection d'anomalies IQR requiert une série numérique.")
 

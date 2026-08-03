@@ -19,6 +19,7 @@ import tempfile
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field, model_validator
 
 from decision_core.importer import UnsupportedFileFormatError, import_file
 from decision_core.report import generate_report
@@ -111,12 +112,11 @@ async def verify_internal_key(request: Request, call_next):
 
 @app.get("/health")
 async def health():
+    """Endpoint de santé pour vérifier que le service est opérationnel."""
     return {"status": "ok"}
 
-
-from pydantic import BaseModel, Field, model_validator
-
 class SimulationConfigModel(BaseModel):
+    """Modèle de validation pour la configuration de simulation."""
     target: str
     feature: str
     change_pct: float
@@ -126,6 +126,7 @@ class SimulationConfigModel(BaseModel):
 
     @model_validator(mode="after")
     def validate_bounds(self):
+        """Valide la cohérence des bornes de simulation."""
         # Utilisation de l'opérateur XOR bit à bit pour vérifier si un seul des deux est défini
         if (self.bounds_min is not None) ^ (self.bounds_max is not None):
             raise ValueError("Pour appliquer des bornes de simulation, les deux paramètres bounds_min et bounds_max doivent être fournis.")
@@ -167,6 +168,24 @@ async def analyze(
     bounds_max: float | None = Form(None),
     iqr_k: float | None = Form(None),
 ):
+    """Analyse un fichier de données et génère un rapport statistique.
+
+    Args:
+        file: Fichier CSV ou Excel à analyser.
+        target: Colonne cible pour la simulation (optionnel).
+        feature: Colonne feature pour la simulation (optionnel).
+        change_pct: Variation en % pour la simulation (optionnel).
+        baseline_feature_value: Valeur de référence de la feature (optionnel).
+        bounds_min: Borne inférieure pour le résultat simulé (optionnel).
+        bounds_max: Borne supérieure pour le résultat simulé (optionnel).
+        iqr_k: Multiplicateur IQR pour la détection d'anomalies (optionnel).
+
+    Returns:
+        Rapport d'analyse généré par decision-core.
+
+    Raises:
+        HTTPException: Si le fichier est trop volumineux ou invalide.
+    """
     content = await file.read()
     if len(content) > MAX_FILE_SIZE_BYTES:
         raise HTTPException(

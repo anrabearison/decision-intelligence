@@ -20,6 +20,14 @@ MAX_COLUMNS_FOR_CORRELATION = 50
 
 
 def descriptive_stats(series: pd.Series) -> dict:
+    """Calcule les statistiques descriptives d'une série numérique.
+
+    Args:
+        series: Série pandas numérique.
+
+    Returns:
+        Dictionnaire contenant mean, std_dev, min, max, median.
+    """
     return {
         "mean": float(series.mean()),
         "std_dev": float(series.std()),
@@ -30,11 +38,14 @@ def descriptive_stats(series: pd.Series) -> dict:
 
 
 def legitimate_numeric_columns(df: pd.DataFrame) -> list:
-    """Colonnes numériques hors identifiants (ex: numéro de lot, ID
-    séquentiel) - à utiliser partout où des statistiques ou corrélations
-    sont calculées sur des colonnes numériques, pour rester cohérent
-    (cf. correlation_matrix et generate_report, qui utilisaient chacun
-    leur propre liste avant ce fix - trouvé en revue de code)."""
+    """Retourne les colonnes numériques légitimes (hors identifiants).
+
+    Args:
+        df: DataFrame pandas à analyser.
+
+    Returns:
+        Liste des noms de colonnes numériques qui ne sont pas des identifiants.
+    """
     numeric_df = df.select_dtypes(include="number")
     return [
         col for col in numeric_df.columns
@@ -43,22 +54,36 @@ def legitimate_numeric_columns(df: pd.DataFrame) -> list:
 
 
 def correlation_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    """Calcule la matrice de corrélation des colonnes numériques légitimes.
+
+    Args:
+        df: DataFrame pandas à analyser.
+
+    Returns:
+        DataFrame de corrélation (méthode de Pearson).
+    """
     legitimate_cols = legitimate_numeric_columns(df)
     return df[legitimate_cols].corr()
 
 
 def correlation_pvalues(df: pd.DataFrame) -> list:
-    """Corrélations de Pearson avec p-value, corrigées pour comparaisons
-    multiples (Benjamini-Hochberg / contrôle du taux de fausses
-    découvertes). Choisi plutôt que Bonferroni : notre usage est
-    exploratoire (repérer des pistes), pas confirmatoire - Bonferroni
-    est trop conservateur et supprimerait quasiment tout signal dès
-    10+ colonnes (croissance quadratique du nombre de paires testées).
+    """Calcule les corrélations de Pearson avec p-values corrigées.
 
-    Trouvé en audit expert : sans correction, avec 15 colonnes
-    indépendantes (aucune vraie relation) et n=30, la corrélation la
-    plus forte dépassait 0.4 dans 97% des tirages, purement par hasard
-    (problème classique des comparaisons multiples)."""
+    Args:
+        df: DataFrame pandas à analyser.
+
+    Returns:
+        Liste de dictionnaires contenant :
+        - column_a, column_b: noms des colonnes
+        - value: coefficient de corrélation
+        - p_value: p-value brute
+        - p_value_adjusted: p-value corrigée (Benjamini-Hochberg)
+        - significant_after_correction: booléen indiquant la significativité
+
+    Note:
+        Utilise la correction Benjamini-Hochberg (FDR) plutôt que Bonferroni
+        pour l'analyse exploratoire.
+    """
     legitimate_cols = legitimate_numeric_columns(df)
     if len(legitimate_cols) > MAX_COLUMNS_FOR_CORRELATION:
         # Sélection déterministe (les N premières colonnes dans l'ordre

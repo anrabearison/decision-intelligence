@@ -8,6 +8,18 @@ from decision_core.type_detection import is_identifier_column
 
 
 def validate_dataset(df: pd.DataFrame) -> dict:
+    """Valide un dataset et signale les problèmes.
+
+    Args:
+        df: DataFrame pandas à valider.
+
+    Returns:
+        Dictionnaire contenant :
+        - n_rows: nombre de lignes
+        - n_columns: nombre de colonnes
+        - duplicates_count: nombre de doublons détectés
+        - missing_values: dictionnaire {colonne: nombre de valeurs manquantes}
+    """
     missing_values = {col: int(df[col].isna().sum()) for col in df.columns}
 
     # Les colonnes identifiant sont exclues de la comparaison de doublons :

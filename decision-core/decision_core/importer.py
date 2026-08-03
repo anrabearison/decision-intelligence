@@ -35,6 +35,18 @@ class UnsupportedFileFormatError(Exception):
 
 
 def import_file(path: str) -> pd.DataFrame:
+    """Importe un fichier CSV ou Excel dans un DataFrame pandas.
+
+    Args:
+        path: Chemin vers le fichier à importer.
+
+    Returns:
+        DataFrame pandas contenant les données importées.
+
+    Raises:
+        FileNotFoundError: Si le fichier n'existe pas.
+        UnsupportedFileFormatError: Si le format n'est pas supporté.
+    """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Fichier introuvable : {path}")
 

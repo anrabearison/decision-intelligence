@@ -7,6 +7,15 @@ import pandas as pd
 
 
 def detect_column_type(series: pd.Series) -> str:
+    """Détecte le type d'une colonne pandas.
+
+    Args:
+        series: Série pandas à analyser.
+
+    Returns:
+        Une chaîne parmi : "numeric_continuous", "numeric_discrete",
+        "categorical", "boolean", "datetime", "identifier", "text_free", "unknown".
+    """
     non_null = series.dropna()
     n = len(non_null)
     if n == 0:
@@ -78,9 +87,12 @@ def _is_sequential_numeric_identifier(series: pd.Series) -> bool:
 
 
 def is_identifier_column(series: pd.Series) -> bool:
-    """Détection d'identifiant unifiée, réutilisable par tout module qui
-    doit exclure une colonne identifiant (profiling, validation...) sans
-    dépendre du nom de la colonne (une heuristique par nom, ex: "id"
-    exactement, rate tout identifiant nommé différemment - "Identifiant",
-    "Numero", "Code"... très courant en français - trouvé en audit)."""
+    """Détecte si une colonne est un identifiant.
+
+    Args:
+        series: Série pandas à analyser.
+
+    Returns:
+        True si la colonne est un identifiant, False sinon.
+    """
     return detect_column_type(series) == "identifier" or _is_sequential_numeric_identifier(series)

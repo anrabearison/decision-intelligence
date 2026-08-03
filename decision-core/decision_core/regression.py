@@ -65,6 +65,21 @@ def _validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame
 
 
 def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> RegressionResult:
+    """Ajuste une régression linéaire simple entre deux variables.
+
+    Args:
+        df: DataFrame pandas contenant les données.
+        target: Nom de la colonne cible (variable dépendante).
+        feature: Nom de la colonne feature (variable indépendante).
+
+    Returns:
+        RegressionResult contenant slope, intercept, r_squared, feature, target.
+        Utilisez .to_dict() pour obtenir un dictionnaire plat si nécessaire.
+
+    Raises:
+        TypeError: Si les colonnes ne sont pas numériques.
+        InsufficientDataError: Si pas assez de données ou variance nulle.
+    """
     if not pd.api.types.is_numeric_dtype(df[feature]):
         raise TypeError(f"La colonne '{feature}' doit être numérique pour une régression.")
     if not pd.api.types.is_numeric_dtype(df[target]):
@@ -86,6 +101,22 @@ def fit_simple_regression(df: pd.DataFrame, target: str, feature: str) -> Regres
 
 
 def fit_multivariate_regression(df: pd.DataFrame, target: str, features: list) -> RegressionResult:
+    """Ajuste une régression linéaire multivariée.
+
+    Args:
+        df: DataFrame pandas contenant les données.
+        target: Nom de la colonne cible (variable dépendante).
+        features: Liste des noms de colonnes features (variables indépendantes).
+
+    Returns:
+        RegressionResult contenant intercept, coefficients, r_squared, target,
+        condition_number, multicollinearity_warning.
+        Utilisez .to_dict() pour obtenir un dictionnaire plat si nécessaire.
+
+    Raises:
+        TypeError: Si les colonnes ne sont pas numériques.
+        InsufficientDataError: Si pas assez de données ou variance nulle.
+    """
     for f in features + [target]:
         if not pd.api.types.is_numeric_dtype(df[f]):
             raise TypeError(f"La colonne '{f}' doit être numérique pour une régression.")

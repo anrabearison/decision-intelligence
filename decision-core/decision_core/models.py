@@ -18,6 +18,7 @@ class SimulationConfig:
     bounds: tuple[float, float] | None = None
 
     def __post_init__(self):
+        """Valide la cohérence de la configuration."""
         if self.bounds is not None:
             min_val, max_val = self.bounds
             if min_val > max_val:

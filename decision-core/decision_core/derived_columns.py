@@ -54,9 +54,17 @@ def _matches_within_tolerance(actual: np.ndarray, predicted: np.ndarray) -> bool
 
 
 def detect_derived_relationships(df: pd.DataFrame, numeric_cols: list) -> set:
-    """Retourne un ensemble de frozenset({colA, colB}) pour chaque paire
-    de colonnes liées par une relation dérivée (l'une des deux entre
-    dans le calcul de l'autre via une troisième colonne du fichier)."""
+    """Détecte les relations de colonnes dérivées (produit, somme, différence).
+
+    Args:
+        df: DataFrame pandas contenant les données.
+        numeric_cols: Liste des colonnes numériques à analyser.
+
+    Returns:
+        Ensemble de frozenset({colA, colB}) pour chaque paire de colonnes
+        liées par une relation dérivée (l'une des deux entre dans le calcul
+        de l'autre via une troisième colonne du fichier).
+    """
     cols = numeric_cols[:MAX_COLUMNS_FOR_DERIVED_DETECTION]
 
     # Conversion unique en numpy : évite l'overhead d'indexation pandas
