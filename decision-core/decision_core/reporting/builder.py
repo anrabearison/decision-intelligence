@@ -80,21 +80,20 @@ def _build_anomalies_section(
 def _build_correlations_section(
     df: pd.DataFrame,
     numeric_cols: list[str],
+    derived_relationships: set,
 ) -> tuple[list, list]:
     """Calcule corrélations et filtre les relations dérivées.
 
     Args:
         df: DataFrame pandas à analyser.
         numeric_cols: Liste des colonnes numériques.
+        derived_relationships: Ensemble des relations dérivées détectées.
 
     Returns:
         Tuple (top_correlations, corr_pairs) pour réutilisation en aval.
     """
-    from decision_core.derived_columns import detect_derived_relationships
-
     corr_pairs = correlation_pvalues(df)
 
-    derived_relationships = detect_derived_relationships(df, numeric_cols)
     if derived_relationships:
         corr_pairs = [
             p for p in corr_pairs
@@ -207,10 +206,9 @@ def generate_report(
         )
 
     # — Corrélations —
-    top_correlations, corr_pairs = _build_correlations_section(df, numeric_cols)
-    # Récupérer les relations dérivées pour les warnings
     from decision_core.stats.derived_columns import detect_derived_relationships
     derived_relationships = detect_derived_relationships(df, numeric_cols)
+    top_correlations, corr_pairs = _build_correlations_section(df, numeric_cols, derived_relationships)
     _build_correlation_warnings(df, numeric_cols, corr_pairs, derived_relationships, warnings)
     
     # Détection des facteurs confondants pour les corrélations principales
