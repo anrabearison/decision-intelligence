@@ -15,6 +15,9 @@ class SimulationResult:
     model_r_squared: float
     feature: str
     target: str
+    change_absolute: float | None = None
+    change_percentage_points: float | None = None
+    model_type: str | None = None
     bounds_applied: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:

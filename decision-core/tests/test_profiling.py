@@ -4,9 +4,11 @@ Valeurs de référence calculées indépendamment (pandas en ligne de commande)
 et vérifiées avant d'écrire le moteur, conformément au TDD.
 """
 import os
+import warnings
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.stats import ConstantInputWarning
 from decision_core.profiling import (
     descriptive_stats,
     correlation_matrix,
@@ -188,6 +190,18 @@ class TestMultipleComparisonsCorrection:
         assert "p_value" in pairs[0]
         assert "significant_after_correction" in pairs[0]
         assert "value" in pairs[0]
+
+    def test_skips_constant_columns_without_scipy_warning(self):
+        df = pd.DataFrame({
+            "Constante": [1] * 30,
+            "Variable": list(range(30)),
+            "Autre": list(range(30, 60)),
+        })
+        with warnings.catch_warnings(record=True) as captured:
+            warnings.simplefilter("always")
+            pairs = correlation_pvalues(df)
+        assert not any(isinstance(w.message, ConstantInputWarning) for w in captured)
+        assert all("Constante" not in {p["column_a"], p["column_b"]} for p in pairs)
 
 
 class TestCorrelationPvaluesPerformanceCap:

@@ -53,6 +53,7 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
   - ~~**Absence de segmentation** : La baseline globale (2 261 €) agrège sans distinction les magasins de PACA (1 200 €) et du Nord (3 500 €).~~
   - ~~**Ignorance de la région** : La colonne texte `Region` est exclue des corrélations.~~
 * <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.1)** : La colonne `Region` est maintenant intégrée via un encodage One-Hot optionnel et détectée comme sous-groupe majeur, ce qui permet d'orienter vers une résolution du problème de la baseline globale.</span>
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase F3)** : Le moteur avertit que le point de départ du scénario sur `Budget_Pub` (moyenne 764 €) est peu représentatif par rapport à la médiane (550 €), et suggère une segmentation par `Region`.</span>
 
 ### Test 2 : Ressources Humaines
 * **Fichier de test** : `examples/rh_masse_salariale_2025.csv`
@@ -159,10 +160,12 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 ### Test 15 : SaaS & Abonnements (Churn)
 * **Fichier de test** : `examples/saas_abonnements_2025.csv`
 * **Configuration de simulation** : Target = `Desabonnement_Churn`, Feature = `Tickets_Support`, Change % = `+50%`
-* **Résultat obtenu** : Baseline = 0,267 (26.7%), Simulation = 0,479 (47.9%) soit +79,45% relatif, $R^2 = 0,643$.
+* **Résultat obtenu** : Baseline = 0,067 (6,7%), Simulation = 0,739 (73,9%) soit +67,2 points de probabilité, $R^2 = 0,806$.
 * **Analyse & Critique Métier** :
   - ~~**Cible binaire (Churn 0/1)** : Événement binaire estimé par régression linéaire ordinaire au lieu d'une régression logistique.~~
-* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P0)** : Le moteur détecte automatiquement les cibles binaires et bascule sur une régression logistique (L-BFGS-B). Les probabilités sont correctement bornées dans $[0, 1]$.</span>
+  - ~~**Bug baseline négative** : Le chemin de simulation appliquait auparavant `intercept + coefficient × X` directement sur le modèle logistique, produisant une valeur impossible hors $[0, 1]$.~~
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P0/F3)** : Le moteur détecte automatiquement les cibles binaires, bascule sur une régression logistique (L-BFGS-B), projette via la fonction sigmoïde et affiche la variation en points de probabilité plutôt qu'en pourcentage relatif trompeur.</span>
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase F3)** : Le moteur avertit que la baseline de la cible `Desabonnement_Churn` (moyenne 0.27) est peu représentative par rapport à la médiane (0.00) — distribution fortement asymétrique — et suggère une segmentation par `Plan_Souscrit`.</span>
 
 ---
 
@@ -286,6 +289,12 @@ La baseline calculée comme moyenne arithmétique de l'historique complet ne cor
 | #11 Restauration | 2 397 €/jour | Mélange weekends (haute affluence) + semaine |
 | #16 Cybersécurité | 167 993 € par incident | Aucun incident à ce coût : soit < 22 000 € soit > 280 000 € |
 
+<span style="color: #2ea043;">**État Actuel (Août 2026 - Phase F3)** : Le moteur détecte désormais les distributions asymétriques (ratio `|mean - median| / std > 0.4`) et génère deux types d'alertes ciblés :
+- **Cible Y asymétrique** → *"Baseline de simulation peu représentative"* (Tests #9, #12, #15, #16)
+- **Levier X asymétrique** → *"Point de départ du scénario peu représentatif"* (Tests #1, #6, #14)
+
+Le warning suggère automatiquement le sous-groupe structurant déjà détecté en P1.1 (`Criticite`, `Canal_Ad`, `Type_Machine`, etc.). La valeur de la baseline n'est pas modifiée — le moteur informe, ne décide pas.</span>
+
 ---
 
 ### Faille #4 — Non-linéarité ignorée (courbe en U / paliers / optimum) *(3 tests sur 18)*
@@ -359,3 +368,18 @@ Le moteur de régression suppose implicitement une distribution gaussienne (loi 
     *   Implémentation de la détection des relations par paliers (step functions, ANOVA par tranches).
     *   Implémentation de la détection des courbes paraboliques et optima locaux (régression polynomiale degré 2).
     *   Avertissements générés lorsque le modèle linéaire passe à côté d'un rendement décroissant ou d'une tarification par tranches.
+*   **[Août 2026] Phase F3 - Détection d'Asymétrie & Baseline Non-Représentative** :
+    *   Implémentation de `_build_asymmetry_warnings` : détection des distributions asymétriques via le ratio `|mean - median| / std > 0.4`.
+    *   Deux types d'alertes différenciés : *"Baseline de simulation peu représentative"* (cible Y asymétrique) et *"Point de départ du scénario peu représentatif"* (levier X asymétrique).
+    *   Le warning suggère automatiquement le sous-groupe P1.1 déjà détecté, orientant vers la segmentation comme remède.
+    *   Décision de ne pas modifier la valeur de la baseline — le moteur informe, ne décide pas à la place de l'utilisateur.
+    *   **Correction de bugs** : `StepPatternResult.pattern_type` (AttributeError sur Tests #1/#4), `LogisticRegressionResult.slope` (AttributeError sur Test #15 / Cook's Distance) et simulation logistique bornée via sigmoïde avec variation affichée en points de probabilité.
+
+---
+
+### 📋 Tâches Futures Identifiées
+
+*   **[PRIORITÉ MOYENNE] Interprétation métier des probabilités très sensibles** :
+    *   La simulation logistique produit désormais des probabilités valides dans $[0, 1]$ et affiche la variation en points de probabilité.
+    *   Il reste à enrichir l'explication utilisateur quand une faible probabilité de départ produit une forte variation absolue après simulation.
+    *   Objectif : éviter que l'utilisateur lise une probabilité projetée comme une prédiction certaine.

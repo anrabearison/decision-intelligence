@@ -43,6 +43,28 @@ describe('ReportView - simulation change_pct null (régression connue)', () => {
     render(<ReportView report={report} />)
     expect(screen.getByText('-3.2%')).toBeTruthy()
   })
+
+  it('affiche les simulations logistiques en points de pourcentage', () => {
+    const report = {
+      ...baseReport,
+      simulation: {
+        feature: 'Tickets_Support',
+        baseline: 0.0666,
+        simulated: 0.7389,
+        change_pct: null,
+        change_pct_reliable: false,
+        change_percentage_points: 67.23,
+        model_type: 'logistic',
+        model_r_squared: 0.81,
+      },
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText('6.7%')).toBeTruthy()
+    expect(screen.getByText('73.9%')).toBeTruthy()
+    expect(screen.getByText('+67.2 pts')).toBeTruthy()
+    expect(screen.queryByText('% non fiable')).toBeNull()
+    expect(screen.getByText(/régression logistique/)).toBeTruthy()
+  })
 })
 
 describe('ReportView - significativité statistique des corrélations (régression connue)', () => {
