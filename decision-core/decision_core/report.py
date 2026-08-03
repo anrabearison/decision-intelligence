@@ -10,6 +10,7 @@ corrélation n'est pas causalité.
 """
 import html
 import itertools
+import re
 import pandas as pd
 
 from decision_core.validation import validate_dataset
@@ -40,11 +41,29 @@ _TEMPORAL_KEYWORDS = [
 
 def _detect_temporal_columns(df: pd.DataFrame) -> list:
     """Retourne la liste des noms de colonnes dont le nom suggère une
-    dimension temporelle (date, semaine, saison, etc.)."""
+    dimension temporelle (date, semaine, saison, etc.).
+
+    La détection se fait par découpage du nom en mots (éparateurs _ - espace
+    et split CamelCase) pour éviter les faux positifs sur des mots composés
+    contenant un mot-clé temporel en sous-chaîne :
+      - 'Bonjour' contient 'jour' mais n'est pas temporel → non détecté ✓
+      - 'Budget_Par_Jour' → mots {'budget', 'par', 'jour'} → détecté ✓
+      - 'DateVente' (CamelCase) → 'Date_Vente' → {'date', 'vente'} → détecté ✓
+    """
     found = []
+    temporal_set = set(_TEMPORAL_KEYWORDS)
     for col in df.columns:
-        col_lower = col.lower()
-        if any(kw in col_lower for kw in _TEMPORAL_KEYWORDS):
+        # 1. Split CamelCase : 'DateVente' → 'Date_Vente'
+        split_camel = re.sub(r'([a-z])([A-Z])', r'\1_\2', col)
+        # 2. Normaliser les séparateurs et découper en mots
+        parts = set(
+            split_camel.lower()
+            .replace("-", "_")
+            .replace(" ", "_")
+            .split("_")
+        )
+        # 3. Intersection avec les mots-clés temporels
+        if parts & temporal_set:
             found.append(col)
     return found
 
@@ -101,7 +120,27 @@ def _compute_exploitability_score(
     return {"level": level, "score": score, "summary": summary}
 
 
-def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> dict:
+def generate_report(
+    df: pd.DataFrame,
+    simulation_config: dict | None = None,
+    analysis_config: dict | None = None,
+) -> dict:
+    """Génère le rapport d'analyse complet du DataFrame.
+
+    Args:
+        df: DataFrame source (issu de import_file).
+        simulation_config: Configuration de simulation (optionnel).
+            Clés reconnues : 'target', 'feature', 'change_pct',
+            'baseline_feature_value', 'bounds'.
+        analysis_config: Configuration de l'analyse (optionnel).
+            Clés reconnues : 'iqr_k' (float, défaut 1.5 — multiplicateur IQR
+            pour la détection d'anomalies).
+
+    Returns:
+        Dict structuré contenant dataset_summary, validation, profiling,
+        anomalies, top_correlations, warnings, exploitability, et
+        optionnellement simulation.
+    """
     warnings = []
     n_rows = len(df)
 
@@ -133,11 +172,11 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
     # échantillon jugé fiable sont incluses (évite un avertissement
     # trompeur sur un échantillon trop petit).
     anomalies = {}
-    # R7 : le multiplicateur IQR est configurable via simulation_config
+    # R7 : le multiplicateur IQR est configurable via analysis_config
     # (clé optionnelle 'iqr_k'). Par défaut : 1.5 (comportement inchangé).
-    iqr_k = 1.5
-    if simulation_config is not None:
-        iqr_k = simulation_config.get("iqr_k", 1.5)
+    # Rationale : iqr_k contrôle la détection d'anomalies, pas la simulation
+    # — il appartient sémantiquement à analysis_config, pas à simulation_config.
+    iqr_k = float((analysis_config or {}).get("iqr_k", 1.5))
     for col in numeric_cols:
         result = detect_anomalies_iqr(df[col], k=iqr_k)
         if result["indices"] and result["reliable"]:
@@ -265,6 +304,8 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
     # R8 — Warning saisonnalité : si une colonne temporelle est détectée
     # ET qu'il existe des corrélations fortes, alerter sur le risque
     # d'inversion de causalité liée à la saisonnalité.
+    # IMPORTANT : R8 doit être exécuté AVANT R9 pour que le warning
+    # saisonnalité soit pris en compte dans le score d'exploitabilité.
     temporal_cols = _detect_temporal_columns(df)
     if temporal_cols:
         strong_corrs = [
@@ -283,7 +324,9 @@ def generate_report(df: pd.DataFrame, simulation_config: dict | None = None) -> 
                 f"analyse par période avant de tirer des conclusions."
             )
 
-    # R9 — Score d'exploitabilité synthétique
+    # R9 — Score d'exploitabilité synthétique.
+    # Calculé après R8 pour que le warning saisonnalité soit inclus
+    # dans le décompte n_warnings utilisé par le score.
     sim_r_squared = report.get("simulation", {}).get("model_r_squared")
     exploitability = _compute_exploitability_score(
         n_rows=n_rows,

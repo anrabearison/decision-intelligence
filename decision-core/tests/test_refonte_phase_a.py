@@ -50,37 +50,43 @@ class TestBaselineConfigurable:
     """R2 : simulate_scenario doit accepter un baseline_feature_value optionnel."""
 
     def test_default_baseline_uses_mean(self):
-        """Sans baseline_feature_value, le comportement par défaut est inchangé."""
+        """Sans baseline_feature_value, la moyenne historique de la feature
+        est utilisée comme point de départ (comportement par défaut inchangé)."""
+        from decision_core.regression import fit_simple_regression
         df = _make_linear_df()
-        result_default = simulate_scenario(df, "Target", "Feature", 0.10)
-        # La baseline doit être cohérente avec la moyenne de Feature
-        assert result_default["baseline"] == pytest.approx(
-            simulate_scenario(df, "Target", "Feature", 0.10)["baseline"]
-        )
+        model = fit_simple_regression(df, "Target", "Feature")
+        expected_baseline = model["intercept"] + model["slope"] * float(df["Feature"].mean())
+        result = simulate_scenario(df, "Target", "Feature", 0.10)
+        assert result["baseline"] == pytest.approx(expected_baseline, rel=1e-9)
 
     def test_custom_baseline_overrides_mean(self):
-        """Avec baseline_feature_value, la valeur fournie remplace la moyenne."""
+        """Avec baseline_feature_value, la valeur fournie remplace la moyenne.
+        Test déterministe : on utilise une valeur fixe connue loin de la moyenne.
+        """
+        from decision_core.regression import fit_simple_regression
         df = _make_linear_df()
-        last_value = float(df["Feature"].iloc[-1])
-        mean_value = float(df["Feature"].mean())
+        # Valeur fixée volontairement éloignée de la moyenne (≈55) : Feature ∈ [10, 100]
+        custom_value = 10.0
+        model = fit_simple_regression(df, "Target", "Feature")
+        expected_custom_baseline = model["intercept"] + model["slope"] * custom_value
+        expected_mean_baseline = model["intercept"] + model["slope"] * float(df["Feature"].mean())
 
-        result_mean = simulate_scenario(df, "Target", "Feature", 0.10)
-        result_custom = simulate_scenario(
-            df, "Target", "Feature", 0.10, baseline_feature_value=last_value
-        )
+        result = simulate_scenario(df, "Target", "Feature", 0.10, baseline_feature_value=custom_value)
 
-        # Les baselines doivent différer si dernière valeur ≠ moyenne
-        if abs(last_value - mean_value) > 1.0:
-            assert result_custom["baseline"] != pytest.approx(result_mean["baseline"])
+        assert result["baseline"] == pytest.approx(expected_custom_baseline, rel=1e-9)
+        assert result["baseline"] != pytest.approx(expected_mean_baseline, rel=1e-3)
 
     def test_custom_baseline_at_zero_is_accepted(self):
-        """Une baseline_feature_value de 0 est acceptée (pas de fallback silencieux)."""
+        """Une baseline_feature_value de 0.0 est acceptée sans exception.
+        Le résultat est mathématiquement correct (simulated = intercept)."""
         df = _make_linear_df()
         result = simulate_scenario(
             df, "Target", "Feature", 0.10, baseline_feature_value=0.0
         )
         assert "baseline" in result
         assert result["feature"] == "Feature"
+        # simulated_feature = 0.0 * (1 + 0.10) = 0.0 → égal à la baseline
+        assert result["simulated"] == pytest.approx(result["baseline"], rel=1e-9)
 
     def test_simulation_config_dict_supports_baseline(self):
         """generate_report doit passer baseline_feature_value depuis simulation_config."""
@@ -109,7 +115,6 @@ class TestBornesSimulation:
     def test_bounds_clip_simulated_above_max(self):
         """Un résultat simulé > max_val doit être clippé à max_val."""
         df = _make_linear_df()
-        # Avec une très forte hausse, le simulé dépasse vraisemblablement 20
         result = simulate_scenario(
             df, "Target", "Feature", 5.0, bounds=(0.0, 20.0)
         )
@@ -145,6 +150,14 @@ class TestBornesSimulation:
         result = simulate_scenario(df, "Target", "Feature", 0.10)
         assert "bounds_applied" not in result
 
+    def test_bounds_inverted_raises_value_error(self):
+        """bounds=(max, min) avec min > max doit lever ValueError immédiatement.
+        Un appel silencieux avec des bornes inversées produirait toujours
+        la même valeur (max_val = 0) quelle que soit l'entrée."""
+        df = _make_linear_df()
+        with pytest.raises(ValueError, match="bounds invalides"):
+            simulate_scenario(df, "Target", "Feature", 0.10, bounds=(100.0, 0.0))
+
     def test_simulation_config_dict_supports_bounds(self):
         """generate_report doit passer bounds depuis simulation_config."""
         df = _make_linear_df()
@@ -165,7 +178,7 @@ class TestBornesSimulation:
 # ---------------------------------------------------------------------------
 
 class TestSeuilIQRConfigurable:
-    """R7 : le multiplicateur k de l'IQR doit être configurable."""
+    """R7 : le multiplicateur k de l'IQR est configurable via analysis_config."""
 
     def test_default_k_preserved(self):
         """k=1.5 par défaut — le comportement existant est inchangé."""
@@ -176,37 +189,57 @@ class TestSeuilIQRConfigurable:
 
     def test_higher_k_fewer_anomalies(self):
         """Un k plus élevé doit produire moins d'anomalies (bornes plus larges)."""
-        series = pd.Series([1.0] * 30 + [10.0])  # 10 est légèrement au-delà
+        series = pd.Series([1.0] * 30 + [10.0])
         result_strict = detect_anomalies_iqr(series, k=1.5)
         result_lax = detect_anomalies_iqr(series, k=3.0)
-        # Avec k=3.0, le seuil doit être plus permissif
         assert len(result_lax["indices"]) <= len(result_strict["indices"])
 
-    def test_iqr_k_via_simulation_config(self):
-        """generate_report doit lire iqr_k depuis simulation_config et l'appliquer."""
-        # Dataset avec 50 lignes pour dépasser MIN_RELIABLE_SAMPLE_SIZE
+    def test_iqr_k_via_analysis_config(self):
+        """generate_report doit lire iqr_k depuis analysis_config (et non
+        simulation_config) — séparation de responsabilités."""
         df = _make_sales_df()
         # k très élevé → presque aucune anomalie (bornes très larges)
         report_lax = generate_report(
-            df, simulation_config={"target": "CA", "feature": "Semaine",
-                                   "change_pct": 0.1, "iqr_k": 10.0}
+            df,
+            simulation_config={"target": "CA", "feature": "Semaine", "change_pct": 0.1},
+            analysis_config={"iqr_k": 10.0},
         )
         # k très strict → plus d'anomalies potentielles
         report_strict = generate_report(
-            df, simulation_config={"target": "CA", "feature": "Semaine",
-                                   "change_pct": 0.1, "iqr_k": 0.5}
+            df,
+            simulation_config={"target": "CA", "feature": "Semaine", "change_pct": 0.1},
+            analysis_config={"iqr_k": 0.5},
         )
-        # Avec k=10, il doit y avoir moins d'anomalies qu'avec k=0.5
-        n_anomalies_lax = sum(len(a["indices"]) for a in report_lax["anomalies"].values())
-        n_anomalies_strict = sum(len(a["indices"]) for a in report_strict["anomalies"].values())
-        assert n_anomalies_lax <= n_anomalies_strict
+        n_lax = sum(len(a["indices"]) for a in report_lax["anomalies"].values())
+        n_strict = sum(len(a["indices"]) for a in report_strict["anomalies"].values())
+        assert n_lax <= n_strict
 
-    def test_iqr_k_default_without_simulation_config(self):
-        """Sans simulation_config, k=1.5 est utilisé (compatibilité ascendante)."""
+    def test_iqr_k_default_without_any_config(self):
+        """Sans simulation_config ni analysis_config, k=1.5 est utilisé
+        (compatibilité ascendante totale)."""
         df = _make_sales_df()
         report = generate_report(df)
-        # Le rapport doit fonctionner normalement sans simulation_config
         assert "anomalies" in report
+
+    def test_iqr_k_not_read_from_simulation_config(self):
+        """iqr_k dans simulation_config ne doit PAS affecter la détection d'anomalies
+        (séparation de responsabilités : simulation_config ne contrôle pas l'IQR)."""
+        df = _make_sales_df()
+        # Si iqr_k était lu depuis simulation_config, k=0.0001 produirait des
+        # anomalies partout ; avec k lu depuis analysis_config uniquement,
+        # ce paramètre est ignoré et k=1.5 s'applique.
+        report_with_fake_iqr = generate_report(
+            df,
+            simulation_config={
+                "target": "CA", "feature": "Semaine",
+                "change_pct": 0.1, "iqr_k": 0.0001,  # ne doit pas être lu
+            },
+        )
+        report_default = generate_report(
+            df,
+            simulation_config={"target": "CA", "feature": "Semaine", "change_pct": 0.1},
+        )
+        assert report_with_fake_iqr["anomalies"] == report_default["anomalies"]
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +252,7 @@ class TestWarningSaisonnalite:
 
     def test_detect_temporal_columns_by_keyword(self):
         """_detect_temporal_columns détecte les colonnes dont le nom contient
-        un mot-clé temporel."""
+        un mot-clé temporel comme mot entier (pas en sous-chaîne)."""
         df = pd.DataFrame({
             "Semaine": range(10),
             "Prix": range(10),
@@ -237,6 +270,21 @@ class TestWarningSaisonnalite:
         assert "DATE_VENTE" in temporal
         assert "MOIS" in temporal
         assert "Revenue" not in temporal
+
+    def test_detect_temporal_columns_no_false_positive_bonjour(self):
+        """'Bonjour' contient 'jour' en sous-chaîne mais n'est PAS temporel.
+        La détection par mot entier évite ce faux positif."""
+        df = pd.DataFrame({"Bonjour": [], "Montant": []})
+        temporal = _detect_temporal_columns(df)
+        assert "Bonjour" not in temporal
+
+    def test_detect_temporal_columns_camelcase(self):
+        """Les colonnes CamelCase sont correctement découpées.
+        'DateVente' → {'date', 'vente'} → détecté comme temporel."""
+        df = pd.DataFrame({"DateVente": [], "PrixUnitaire": []})
+        temporal = _detect_temporal_columns(df)
+        assert "DateVente" in temporal
+        assert "PrixUnitaire" not in temporal
 
     def test_no_temporal_warning_without_temporal_column(self):
         """Sans colonne temporelle, aucun warning de saisonnalité."""
