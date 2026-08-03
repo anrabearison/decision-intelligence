@@ -1,0 +1,13 @@
+Mois;Type_Flux;Creances_Clients_Euros;Dettes_Fournisseurs_Euros;Delai_Paiement_Jours;Solde_Tresorerie_Euros;Taux_Interet_Pct
+2025-01;Exploitation;125000;85000;45;40000;3,5
+2025-02;Exploitation;140000;90000;50;50000;3,5
+2025-03;Exploitation;110000;95000;60;15000;3,7
+2025-04;Investissement;95000;120000;65;-25000;4,0
+2025-05;Exploitation;130000;80000;40;50000;4,0
+2025-06;Exploitation;160000;85000;35;75000;3,8
+2025-07;Exploitation;175000;90000;38;85000;3,8
+2025-08;Exploitation;80000;70000;55;10000;3,9
+2025-09;Exploitation;150000;95000;42;55000;3,9
+2025-10;Exploitation;155000;100000;48;55000;4,1
+2025-11;Investissement;120000;140000;70;-20000;4,2
+2025-12;Exploitation;190000;110000;30;80000;4,2

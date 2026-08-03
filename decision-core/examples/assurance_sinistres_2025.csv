@@ -1,0 +1,16 @@
+Contrat_ID;Type_Couverture;Age_Conducteur;Puissance_Vehicule_CV;Prime_Annuelle_Euros;Nombre_Sinistres;Cout_Indemnisation_Euros
+ASS-01;Tiers;21;90;750;1;2400
+ASS-02;TousRisques;45;110;950;0;0
+ASS-03;TousRisques;58;130;1100;0;0
+ASS-04;Tiers;19;75;850;2;8500
+ASS-05;TousRisques;34;150;1300;0;0
+ASS-06;Tiers;62;90;600;0;0
+ASS-07;TousRisques;23;140;1600;1;14200
+ASS-08;TousRisques;50;115;980;0;0
+ASS-09;Tiers;29;85;680;0;0
+ASS-10;TousRisques;41;160;1450;1;3800
+ASS-11;Tiers;72;80;550;0;0
+ASS-12;TousRisques;25;120;1250;0;0
+ASS-13;Tiers;38;95;710;0;0
+ASS-14;TousRisques;52;180;1750;1;22000
+ASS-15;Tiers;31;85;660;0;0

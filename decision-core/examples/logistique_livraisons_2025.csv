@@ -1,0 +1,16 @@
+ID_Commande;Mode_Livraison;Distance_Km;Poids_Colis_Kg;Frais_Port_Euros;Temps_Livraison_Heures;Reclamations_Client
+CMD-101;Express;450;1,5;15,00;18;0
+CMD-102;Standard;120;0,8;5,90;48;0
+CMD-103;Standard;850;4,5;8,90;72;1
+CMD-104;Express;300;2,0;15,00;24;0
+CMD-105;Relais;50;1,2;4,50;48;0
+CMD-106;Standard;600;12,0;14,90;96;1
+CMD-107;Express;950;0,5;15,00;20;0
+CMD-108;Relais;210;3,0;4,50;60;0
+CMD-109;Standard;40;8,5;12,90;36;0
+CMD-110;Express;150;15,0;25,00;16;0
+CMD-111;Relais;380;0,9;4,50;52;0
+CMD-112;Standard;720;2,5;7,90;70;0
+CMD-113;Express;500;6,0;18,00;22;0
+CMD-114;Relais;180;1,8;4,50;44;0
+CMD-115;Standard;90;18,0;18,90;40;0

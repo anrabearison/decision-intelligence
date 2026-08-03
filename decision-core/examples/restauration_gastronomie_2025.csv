@@ -1,0 +1,15 @@
+Jour_Semaine;Meteo;Nombre_Couverts;Ticket_Moyen_Euros;Gaspillage_Alimentaire_Kg;Chiffre_Affaires_Jour
+Lundi;Soleil;45;28,50;6,2;1282,50
+Mardi;Pluie;38;26,00;8,5;988,00
+Mercredi;Soleil;52;29,00;5,0;1508,00
+Jeudi;Nuage;60;31,50;4,8;1890,00
+Vendredi;Soleil;110;38,00;3,2;4180,00
+Samedi;Soleil;135;42,50;2,5;5737,50
+Dimanche;Pluie;70;34,00;7,1;2380,00
+Lundi;Pluie;32;25,50;9,0;816,00
+Mardi;Soleil;48;28,00;5,5;1344,00
+Mercredi;Nuage;55;30,00;4,9;1650,00
+Jeudi;Soleil;65;33,00;4,1;2145,00
+Vendredi;Nuage;105;37,50;3,8;3937,50
+Samedi;Pluie;115;39,00;5,2;4485,00
+Dimanche;Soleil;85;36,00;3,0;3060,00

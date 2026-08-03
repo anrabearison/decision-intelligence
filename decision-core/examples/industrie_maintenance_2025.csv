@@ -1,0 +1,16 @@
+Machine_ID;Type_Machine;Vibrations_Hz;Temperature_C;Pression_Bar;Heures_Fonctionnement;Anomalies_Comptees
+MAC-01;Presse;12,4;65,0;4,2;1200;0
+MAC-02;Presse;14,1;72,5;4,5;2500;1
+MAC-03;Robot;8,2;45,0;2,1;800;0
+MAC-04;Robot;9,0;48,0;2,3;1500;0
+MAC-05;Presse;28,5;95,0;6,8;4800;5
+MAC-06;Fraiseuse;15,0;58,0;3,1;3100;1
+MAC-07;Robot;8,5;46,5;2,2;1100;0
+MAC-08;Presse;32,1;102,0;7,2;5200;7
+MAC-09;Fraiseuse;16,8;62,0;3,4;3600;2
+MAC-10;Presse;11,8;63,5;4,1;950;0
+MAC-11;Robot;7,9;44,0;2,0;600;0
+MAC-12;Fraiseuse;22,4;81,0;5,0;4200;4
+MAC-13;Presse;13,0;67,0;4,3;1800;0
+MAC-14;Robot;9,2;49,0;2,4;1900;0
+MAC-15;Fraiseuse;18,1;69,0;3,8;3900;2

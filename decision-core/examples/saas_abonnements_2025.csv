@@ -1,0 +1,16 @@
+Compte_ID;Plan_Souscrit;Utilisateurs_Actifs_Mensuels;Tickets_Support;MRR_Mensuel_Euros;Desabonnement_Churn
+ACC-001;Starter;5;1;49;0
+ACC-002;Starter;3;0;49;0
+ACC-003;Pro;25;2;199;0
+ACC-004;Pro;18;8;199;1
+ACC-005;Enterprise;120;3;999;0
+ACC-006;Starter;2;5;49;1
+ACC-007;Pro;30;1;199;0
+ACC-008;Enterprise;250;4;999;0
+ACC-009;Starter;8;2;49;0
+ACC-010;Pro;12;12;199;1
+ACC-011;Enterprise;180;2;999;0
+ACC-012;Starter;1;6;49;1
+ACC-013;Pro;40;3;199;0
+ACC-014;Enterprise;300;5;999;0
+ACC-015;Starter;6;1;49;0

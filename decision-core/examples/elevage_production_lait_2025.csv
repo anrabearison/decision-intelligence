@@ -1,0 +1,16 @@
+ID_Animal;Race;Age_Annees;Poids_Kg;Ration_Fourrage_Kg;Traitement_Antibio;Litres_Lait_Jour;Taux_Butyrique
+BOV-001;Holstein;3,5;580;22,5;Non;32,5;38,2
+BOV-002;Holstein;4,0;610;24,0;Non;34,0;37,8
+BOV-003;Holstein;2,0;520;19,0;Non;26,0;39,1
+BOV-004;Jersey;3,0;430;16,5;Non;21,0;48,5
+BOV-005;Jersey;5,0;460;17,5;Non;22,5;49,2
+BOV-006;Jersey;2,5;410;15,0;Oui;16,0;46,0
+BOV-007;Holstein;6,0;640;25,0;Oui;28,0;36,5
+BOV-008;Holstein;5,5;630;24,5;Non;35,5;37,2
+BOV-009;Jersey;4,5;450;17,0;Non;23,0;48,9
+BOV-010;Holstein;1,8;490;18,0;Non;24,0;39,5
+BOV-011;Holstein;7,0;650;23,0;Non;30,0;37,0
+BOV-012;Jersey;6,0;470;18,0;Non;22,0;50,1
+BOV-013;Holstein;3,0;570;21,5;Oui;25,0;38,0
+BOV-014;Jersey;3,8;440;16,8;Non;21,5;47,8
+BOV-015;Holstein;4,2;600;23,5;Non;33,5;37,9

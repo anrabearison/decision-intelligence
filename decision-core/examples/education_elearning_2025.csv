@@ -1,0 +1,16 @@
+Etudiant_ID;Niveau;Temps_Video_Heures;Exercices_Completes;Tentatives_Quiz;Note_Examen_Sur_20
+ETU-201;Licence;12;25;5;11,5
+ETU-202;Licence;25;50;10;15,0
+ETU-203;Licence;40;80;15;18,5
+ETU-204;Master;45;90;18;19,5
+ETU-205;Master;60;100;22;20,0
+ETU-206;Licence;5;10;2;8,0
+ETU-207;Licence;18;35;7;13,0
+ETU-208;Master;35;70;14;17,5
+ETU-209;Master;50;95;20;20,0
+ETU-210;Licence;8;15;3;9,5
+ETU-211;Master;70;100;25;20,0
+ETU-212;Licence;30;60;12;16,5
+ETU-213;Licence;22;45;9;14,0
+ETU-214;Master;55;98;21;20,0
+ETU-215;Licence;15;30;6=;12,0

@@ -1,0 +1,16 @@
+Reservation_ID;Canal_Booking;Prix_Nuit_Euros;Duree_Sejour_Jours;Delai_Reservation_Jours;Taux_Annulation_Pct;Revenu_Total_Euros
+RES-501;Direct;120;3;15;2,5;360
+RES-502;Booking;140;2;45;12,0;280
+RES-503;Direct;110;5;10;1,0;550
+RES-504;Expedia;150;1;60;18,0;150
+RES-505;Direct;130;4;7;0,5;520
+RES-506;Booking;160;2;90;25,0;320
+RES-507;Direct;115;3;12;2,0;345
+RES-508;Expedia;145;2;30;14,0;290
+RES-509;Direct;125;6;5;0,0;750
+RES-510;Booking;170;1;120;30,0;170
+RES-511;Direct;105;4;14;1,5;420
+RES-512;Booking;155;3;40;10,0;465
+RES-513;Expedia;135;2;25;8,0;270
+RES-514;Direct;118;5;8;0,8;590
+RES-515;Booking;165;2;75;22,0;330

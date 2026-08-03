@@ -1,0 +1,16 @@
+Patient_ID;Diagnostic;Age_Patient;IMC;Pression_Arterielle_Sys;Dosage_Medicament_Mg;Jours_Hospitalisation;Score_Retablissement
+PAT-001;Hypertension;55;28,4;145;50;4;85
+PAT-002;Hypertension;62;31,2;160;100;6;90
+PAT-003;Hypertension;45;24,1;135;25;2;70
+PAT-004;Diabete;50;29,5;138;50;5;78
+PAT-005;Diabete;68;33,0;155;100;9;82
+PAT-006;Hypertension;70;30,1;165;150;8;65
+PAT-007;Diabete;41;22,8;128;25;3;88
+PAT-008;Hypertension;58;27,6;142;50;4;84
+PAT-009;Diabete;63;32,4;150;100;7;80
+PAT-010;Hypertension;38;23,5;125;25;1;92
+PAT-011;Hypertension;75;29,0;170;150;10;60
+PAT-012;Diabete;52;28,0;140;50;4;86
+PAT-013;Hypertension;49;26,2;136;50;3;89
+PAT-014;Diabete;66;34,5;158;100;8;75
+PAT-015;Hypertension;56;27,9;144;50;4;83
