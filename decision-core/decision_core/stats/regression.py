@@ -1,8 +1,8 @@
 """
-Module de régression - Phase 1a.
-Choix assumé : régression linéaire uniquement (simple ou multivariée),
-sélection automatique fixe, pas de choix utilisateur de modèle
-(voir README, section "Choix du modèle statistique").
+Module de régression - Phase 1a + 1b.
+
+Choix assumé : régression linéaire par défaut (simple ou multivariée),
+avec basculement automatique sur régression logistique pour les cibles binaires.
 
 Robustesse (voir README, section limites) : les valeurs manquantes,
 colonnes à variance nulle et échantillons trop petits sont détectés
@@ -12,6 +12,9 @@ jamais laissés fuiter en NaN silencieux ou en exception brute de scipy/numpy.
 Phase 1b - Régression logistique : détection automatique des cibles binaires
 et basculement sur régression logistique pour éviter les erreurs de modélisation
 sur des événements binaires (Churn, Panne, Guéri, etc.).
+
+Phase 1b - Encodage catégoriel : optionnellement encoder les variables catégorielles
+en one-hot via le paramètre encode_categorical=True dans fit_simple_regression.
 """
 import numpy as np
 import pandas as pd

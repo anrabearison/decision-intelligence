@@ -1,8 +1,29 @@
 """
-Decision Core - Moteur de Decision Intelligence.
+Decision-Core - Moteur d'analyse de données pour la prise de décision.
 
-Package Python autonome pour l'import, la validation, le profiling,
-la simulation et la génération de rapports statistiques.
+Ce package fournit des outils pour :
+- Régression (linéaire, logistique, multivariée)
+- Traitement des variables catégorielles (encodage one-hot, détection de sous-groupes)
+- Détection d'anomalies et d'influence
+- Profiling des données (statistiques, corrélations)
+- Simulation de scénarios
+- Génération de rapports (texte et HTML)
+
+Nouveautés P0 :
+- Régression logistique automatique pour cibles binaires
+- Détection de facteurs confondants
+- Avertissements de causalité systématiques
+
+Nouveautés P1.1 :
+- Encodage one-hot automatique des variables catégorielles
+- Détection de sous-groupes significatifs via eta-carré
+- Rapports segmentés par sous-groupes
+
+Exemple d'utilisation :
+    >>> from decision_core import import_file, fit_simple_regression, generate_report
+    >>> df = import_file("data.csv")
+    >>> model = fit_simple_regression(df, target="Y", feature="X")
+    >>> report = generate_report(df, config)
 """
 
 from decision_core.io.importer import import_file, UnsupportedFileFormatError
