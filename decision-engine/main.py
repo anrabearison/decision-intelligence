@@ -21,8 +21,8 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 
-from decision_core.importer import UnsupportedFileFormatError, import_file
-from decision_core.report import generate_report
+from decision_core.io.importer import UnsupportedFileFormatError, import_file
+from decision_core.reporting import generate_report
 
 logger = logging.getLogger("decision-engine")
 
