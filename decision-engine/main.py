@@ -19,9 +19,10 @@ import tempfile
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field, model_validator
 
-from decision_core.importer import UnsupportedFileFormatError, import_file
-from decision_core.report import generate_report
+from decision_core.io.importer import UnsupportedFileFormatError, import_file
+from decision_core.reporting import generate_report
 
 logger = logging.getLogger("decision-engine")
 
@@ -111,7 +112,49 @@ async def verify_internal_key(request: Request, call_next):
 
 @app.get("/health")
 async def health():
+    """Endpoint de santé pour vérifier que le service est opérationnel."""
     return {"status": "ok"}
+
+class SimulationConfigModel(BaseModel):
+    """Modèle de validation pour la configuration de simulation."""
+    target: str
+    feature: str
+    change_pct: float
+    baseline_feature_value: float | None = None
+    bounds_min: float | None = None
+    bounds_max: float | None = None
+
+    @model_validator(mode="after")
+    def validate_bounds(self):
+        """Valide la cohérence des bornes de simulation."""
+        # Utilisation de l'opérateur XOR bit à bit pour vérifier si un seul des deux est défini
+        if (self.bounds_min is not None) ^ (self.bounds_max is not None):
+            raise ValueError("Pour appliquer des bornes de simulation, les deux paramètres bounds_min et bounds_max doivent être fournis.")
+        if self.bounds_min is not None and self.bounds_max is not None:
+            if self.bounds_min > self.bounds_max:
+                raise ValueError(f"Bornes invalides : bounds_min ({self.bounds_min}) ne peut pas être supérieur à bounds_max ({self.bounds_max}).")
+        return self
+
+    def to_core_config(self) -> dict:
+        config = {
+            "target": self.target,
+            "feature": self.feature,
+            "change_pct": self.change_pct,
+        }
+        if self.baseline_feature_value is not None:
+            config["baseline_feature_value"] = self.baseline_feature_value
+        if self.bounds_min is not None and self.bounds_max is not None:
+            config["bounds"] = (self.bounds_min, self.bounds_max)
+        return config
+
+
+class AnalysisConfigModel(BaseModel):
+    iqr_k: float | None = Field(default=None, gt=0, description="Multiplicateur IQR pour la détection d'anomalies")
+
+    def to_core_config(self) -> dict | None:
+        if self.iqr_k is None:
+            return None
+        return {"iqr_k": self.iqr_k}
 
 
 @app.post("/engine/analyze")
@@ -120,7 +163,29 @@ async def analyze(
     target: str | None = Form(None),
     feature: str | None = Form(None),
     change_pct: float | None = Form(None),
+    baseline_feature_value: float | None = Form(None),
+    bounds_min: float | None = Form(None),
+    bounds_max: float | None = Form(None),
+    iqr_k: float | None = Form(None),
 ):
+    """Analyse un fichier de données et génère un rapport statistique.
+
+    Args:
+        file: Fichier CSV ou Excel à analyser.
+        target: Colonne cible pour la simulation (optionnel).
+        feature: Colonne feature pour la simulation (optionnel).
+        change_pct: Variation en % pour la simulation (optionnel).
+        baseline_feature_value: Valeur de référence de la feature (optionnel).
+        bounds_min: Borne inférieure pour le résultat simulé (optionnel).
+        bounds_max: Borne supérieure pour le résultat simulé (optionnel).
+        iqr_k: Multiplicateur IQR pour la détection d'anomalies (optionnel).
+
+    Returns:
+        Rapport d'analyse généré par decision-core.
+
+    Raises:
+        HTTPException: Si le fichier est trop volumineux ou invalide.
+    """
     content = await file.read()
     if len(content) > MAX_FILE_SIZE_BYTES:
         raise HTTPException(
@@ -138,13 +203,37 @@ async def analyze(
     finally:
         os.remove(tmp_path)
 
+    # Délégation de la validation et du typage aux modèles Pydantic (POO & Séparation des Responsabilités)
     simulation_config = None
     if target and feature and change_pct is not None:
-        simulation_config = {
-            "target": target,
-            "feature": feature,
-            "change_pct": change_pct,
-        }
+        try:
+            sim_model = SimulationConfigModel(
+                target=target,
+                feature=feature,
+                change_pct=change_pct,
+                baseline_feature_value=baseline_feature_value,
+                bounds_min=bounds_min,
+                bounds_max=bounds_max,
+            )
+            simulation_config = sim_model.to_core_config()
+        except ValueError as e:
+            # Récupère l'erreur de validation levée par le model_validator
+            raise HTTPException(status_code=400, detail=str(e))
 
-    report = generate_report(df, simulation_config=simulation_config)
-    return report
+    analysis_config = None
+    if iqr_k is not None:
+        try:
+            analysis_model = AnalysisConfigModel(iqr_k=iqr_k)
+            analysis_config = analysis_model.to_core_config()
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    report = generate_report(
+        df,
+        simulation_config=simulation_config,
+        analysis_config=analysis_config,
+    )
+    return report.to_dict()
+
+
+

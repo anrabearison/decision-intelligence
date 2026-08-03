@@ -1,0 +1,469 @@
+
+================================================================================
+TEST #1 : Ventes PME — ventes_magasin_2025.csv
+================================================================================
+📊 Dataset : 35 lignes, 8 colonnes
+   Colonnes numériques : ['Prix_Unitaire', 'Quantite_Vendue', 'Budget_Pub', 'Remise_Pct', 'Chiffre_Affaires', 'Satisfaction_Client']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : ['Quantite_Vendue', 'Chiffre_Affaires']
+📈 Top corrélations :
+   Quantite_Vendue ↔ Chiffre_Affaires = 0.997 (p=1.2225536596226288e-36)
+   Quantite_Vendue ↔ Budget_Pub = 0.992 (p=3.165393321180396e-30)
+   Budget_Pub ↔ Chiffre_Affaires = 0.986 (p=1.983393330004388e-26)
+🔴 Anomalies détectées sur : ['Remise_Pct']
+   Remise_Pct: 8 anomalie(s) aux indices [2, 6, 10, 15, 19, 23, 28, 32]
+💡 Simulation :
+   Feature = Budget_Pub, Target = Chiffre_Affaires
+   Baseline = 2261.86
+   Simulated = 2412.60
+   Change = +6.66%
+   R² = 0.9720
+🚦 Exploitabilité : ORANGE (score=65/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (8) :
+   - Anomalie(s) détectée(s) sur 1 colonne(s) (Remise_Pct) : 8 valeur(s) hors de la plage habituelle au total, potentiellement des erreurs de saisie ou des cas exceptionnels à vérifier - elles peuvent fortement fausser la moyenne et l'écart-type affichés.
+   - Comparaisons multiples : sur 15 paires de variables testées, seulement 10 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Quantite_Vendue et Chiffre_Affaires : facteur(s) confondant(s) détecté(s) : Region, Prix_Unitaire. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Quantite_Vendue et Budget_Pub : facteur(s) confondant(s) détecté(s) : Region, Prix_Unitaire. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Budget_Pub et Chiffre_Affaires : facteur(s) confondant(s) détecté(s) : Region, Prix_Unitaire. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Region' explique 100.0% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [6]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+   - Dimension temporelle détectée ('Date') : les corrélations fortes observées peuvent refléter des effets saisonniers plutôt que des relations causales directes. Une hausse de prix en été (haute saison) apparaît corrélée à la fréquentation, par exemple — sans que le prix en soit la cause. Croiser avec une analyse par période avant de tirer des conclusions.
+
+================================================================================
+TEST #2 : RH — rh_masse_salariale_2025.csv
+================================================================================
+📊 Dataset : 20 lignes, 7 colonnes
+   Colonnes numériques : ['Anciennete_Annees', 'Heures_Sup_Mensuelles', 'Formation_Jours', 'Salaire_Brut_Mensuel', 'Score_Evaluation']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Salaire_Brut_Mensuel ↔ Score_Evaluation = 0.916 (p=1.3999718847044633e-08)
+   Anciennete_Annees ↔ Salaire_Brut_Mensuel = 0.860 (p=1.1740765582728242e-06)
+   Anciennete_Annees ↔ Score_Evaluation = 0.793 (p=3.00831644177038e-05)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Anciennete_Annees, Target = Salaire_Brut_Mensuel
+   Baseline = 4252.52
+   Simulated = 4509.37
+   Change = +6.04%
+   R² = 0.7394
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (4) :
+   - Échantillon petit (20 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 10 paires de variables testées, seulement 6 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Anciennete_Annees et Salaire_Brut_Mensuel : facteur(s) confondant(s) détecté(s) : Matricule. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Point(s) influent(s) détecté(s) (ligne(s) [15, 17]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #3 : Élevage — elevage_production_lait_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 8 colonnes
+   Colonnes numériques : ['Age_Annees', 'Poids_Kg', 'Ration_Fourrage_Kg', 'Litres_Lait_Jour', 'Taux_Butyrique']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Poids_Kg ↔ Ration_Fourrage_Kg = 0.981 (p=1.385194414238584e-10)
+   Ration_Fourrage_Kg ↔ Litres_Lait_Jour = 0.911 (p=2.3062694512510077e-06)
+   Poids_Kg ↔ Taux_Butyrique = -0.884 (p=1.2023011056236682e-05)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Ration_Fourrage_Kg, Target = Litres_Lait_Jour
+   Baseline = 26.30
+   Simulated = 30.92
+   Change = +17.57%
+   R² = 0.8304
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (7) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 10 paires de variables testées, seulement 6 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Poids_Kg et Ration_Fourrage_Kg : facteur(s) confondant(s) détecté(s) : Race. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Ration_Fourrage_Kg et Litres_Lait_Jour : facteur(s) confondant(s) détecté(s) : Race. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Poids_Kg et Taux_Butyrique : facteur(s) confondant(s) détecté(s) : Race. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Point(s) influent(s) détecté(s) (ligne(s) [6]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+   - Dimension temporelle détectée ('Litres_Lait_Jour') : les corrélations fortes observées peuvent refléter des effets saisonniers plutôt que des relations causales directes. Une hausse de prix en été (haute saison) apparaît corrélée à la fréquentation, par exemple — sans que le prix en soit la cause. Croiser avec une analyse par période avant de tirer des conclusions.
+
+================================================================================
+TEST #4 : Finance — finance_tresorerie_2025.csv
+================================================================================
+📊 Dataset : 12 lignes, 7 colonnes
+   Colonnes numériques : ['Creances_Clients_Euros', 'Dettes_Fournisseurs_Euros', 'Delai_Paiement_Jours', 'Solde_Tresorerie_Euros', 'Taux_Interet_Pct']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Delai_Paiement_Jours ↔ Solde_Tresorerie_Euros = -0.945 (p=3.529847855603741e-06)
+   Creances_Clients_Euros ↔ Delai_Paiement_Jours = -0.781 (p=0.002728695933432888)
+   Dettes_Fournisseurs_Euros ↔ Taux_Interet_Pct = 0.563 (p=0.05678641981679653)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Delai_Paiement_Jours, Target = Solde_Tresorerie_Euros
+   Baseline = 39166.67
+   Simulated = 66299.44
+   Change = +69.28%
+   R² = 0.8935
+🚦 Exploitabilité : RED (score=20/100)
+   Données insuffisantes ou trop limitées — les résultats sont indicatifs uniquement.
+⚠️  Warnings (9) :
+   - Échantillon petit (12 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Relation calculée détectée entre Creances_Clients_Euros, Dettes_Fournisseurs_Euros, Solde_Tresorerie_Euros : une de ces colonnes semble dérivée mathématiquement des autres (ex: Total = Prix × Quantité). Leur forte corrélation n'est donc pas un insight - c'est une conséquence directe du calcul, pas une découverte.
+   - Comparaisons multiples : sur 7 paires de variables testées, seulement 2 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Delai_Paiement_Jours et Solde_Tresorerie_Euros : facteur(s) confondant(s) détecté(s) : Type_Flux. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Creances_Clients_Euros et Delai_Paiement_Jours : facteur(s) confondant(s) détecté(s) : Type_Flux. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Dettes_Fournisseurs_Euros et Taux_Interet_Pct : facteur(s) confondant(s) détecté(s) : Mois, Type_Flux, Solde_Tresorerie_Euros. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Type_Flux' explique 16.8% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [3]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+   - Dimension temporelle détectée ('Mois') : les corrélations fortes observées peuvent refléter des effets saisonniers plutôt que des relations causales directes. Une hausse de prix en été (haute saison) apparaît corrélée à la fréquentation, par exemple — sans que le prix en soit la cause. Croiser avec une analyse par période avant de tirer des conclusions.
+
+================================================================================
+TEST #5 : Logistique — logistique_livraisons_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Distance_Km', 'Poids_Colis_Kg', 'Frais_Port_Euros', 'Temps_Livraison_Heures', 'Reclamations_Client']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Poids_Colis_Kg ↔ Frais_Port_Euros = 0.699 (p=0.003706581639557004)
+   Temps_Livraison_Heures ↔ Reclamations_Client = 0.694 (p=0.004102515563082759)
+   Frais_Port_Euros ↔ Temps_Livraison_Heures = -0.488 (p=0.06475455909223694)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Distance_Km, Target = Temps_Livraison_Heures
+   Baseline = 44.40
+   Simulated = 45.07
+   Change = +1.51%
+   R² = 0.0531
+🚦 Exploitabilité : RED (score=15/100)
+   Données insuffisantes ou trop limitées — les résultats sont indicatifs uniquement.
+⚠️  Warnings (5) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 10 paires de variables testées, seulement 2 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Frais_Port_Euros et Temps_Livraison_Heures : facteur(s) confondant(s) détecté(s) : Mode_Livraison. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - R² faible (0.05) pour la simulation sur 'Distance_Km' : le modèle explique moins de 30% de la variance de 'Temps_Livraison_Heures' - la projection est peu fiable, à interpréter avec beaucoup de prudence.
+   - Point(s) influent(s) détecté(s) (ligne(s) [5, 6]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #6 : Santé — sante_clinique_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 8 colonnes
+   Colonnes numériques : ['Age_Patient', 'IMC', 'Pression_Arterielle_Sys', 'Dosage_Medicament_Mg', 'Jours_Hospitalisation', 'Score_Retablissement']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Age_Patient ↔ Pression_Arterielle_Sys = 0.969 (p=2.75023599519441e-09)
+   Pression_Arterielle_Sys ↔ Dosage_Medicament_Mg = 0.953 (p=4.2408787337433264e-08)
+   Age_Patient ↔ Jours_Hospitalisation = 0.945 (p=1.1583803908609889e-07)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Dosage_Medicament_Mg, Target = Score_Retablissement
+   Baseline = 80.47
+   Simulated = 75.34
+   Change = -6.37%
+   R² = 0.4131
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (3) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 15 paires de variables testées, seulement 14 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Point(s) influent(s) détecté(s) (ligne(s) [2, 10]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #7 : Éducation — education_elearning_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 6 colonnes
+   Colonnes numériques : ['Temps_Video_Heures', 'Exercices_Completes', 'Tentatives_Quiz', 'Note_Examen_Sur_20']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : ['Tentatives_Quiz']
+📈 Top corrélations :
+   Temps_Video_Heures ↔ Tentatives_Quiz = 0.996 (p=3.236140874276695e-14)
+   Exercices_Completes ↔ Note_Examen_Sur_20 = 0.989 (p=3.1324615497447448e-12)
+   Exercices_Completes ↔ Tentatives_Quiz = 0.986 (p=1.1468885045768333e-10)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Temps_Video_Heures, Target = Note_Examen_Sur_20
+   Baseline = 15.67
+   Simulated = 17.57
+   Change = +12.15%
+   R² = 0.8904
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (6) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Corrélation potentielle spurieuse entre Temps_Video_Heures et Tentatives_Quiz : facteur(s) confondant(s) détecté(s) : Niveau. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Exercices_Completes et Note_Examen_Sur_20 : facteur(s) confondant(s) détecté(s) : Niveau. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Exercices_Completes et Tentatives_Quiz : facteur(s) confondant(s) détecté(s) : Niveau. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Niveau' explique 69.5% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [5, 10]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #8 : Immobilier — immobilier_estimations_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Surface_M2', 'Nombre_Pieces', 'Etage', 'Annee_Construction', 'Prix_Vente_Euros']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Surface_M2 ↔ Nombre_Pieces = 0.984 (p=4.4368279296393037e-11)
+   Surface_M2 ↔ Prix_Vente_Euros = 0.654 (p=0.008152404638121337)
+   Nombre_Pieces ↔ Prix_Vente_Euros = 0.589 (p=0.02080162300116048)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Surface_M2, Target = Prix_Vente_Euros
+   Baseline = 340666.67
+   Simulated = 395254.62
+   Change = +16.02%
+   R² = 0.4279
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (4) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 10 paires de variables testées, seulement 2 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Point(s) influent(s) détecté(s) (ligne(s) [6, 11]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+   - Dimension temporelle détectée ('Annee_Construction') : les corrélations fortes observées peuvent refléter des effets saisonniers plutôt que des relations causales directes. Une hausse de prix en été (haute saison) apparaît corrélée à la fréquentation, par exemple — sans que le prix en soit la cause. Croiser avec une analyse par période avant de tirer des conclusions.
+
+================================================================================
+TEST #9 : Industrie — industrie_maintenance_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Vibrations_Hz', 'Temperature_C', 'Pression_Bar', 'Heures_Fonctionnement', 'Anomalies_Comptees']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Temperature_C ↔ Pression_Bar = 0.990 (p=1.547185820685272e-12)
+   Vibrations_Hz ↔ Anomalies_Comptees = 0.974 (p=9.288143071977451e-10)
+   Vibrations_Hz ↔ Temperature_C = 0.955 (p=2.9658534510967905e-08)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Heures_Fonctionnement, Target = Anomalies_Comptees
+   Baseline = 1.47
+   Simulated = 2.27
+   Change = +54.76%
+   R² = 0.8294
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (5) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Corrélation potentielle spurieuse entre Temperature_C et Pression_Bar : facteur(s) confondant(s) détecté(s) : Type_Machine, Anomalies_Comptees. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Vibrations_Hz et Temperature_C : facteur(s) confondant(s) détecté(s) : Anomalies_Comptees. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Type_Machine' explique 42.1% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [7]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #10 : Hôtellerie — hotellerie_reservations_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Prix_Nuit_Euros', 'Duree_Sejour_Jours', 'Delai_Reservation_Jours', 'Taux_Annulation_Pct', 'Revenu_Total_Euros']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Delai_Reservation_Jours ↔ Taux_Annulation_Pct = 0.977 (p=4.636794212414821e-10)
+   Prix_Nuit_Euros ↔ Taux_Annulation_Pct = 0.915 (p=1.8166177559107254e-06)
+   Prix_Nuit_Euros ↔ Delai_Reservation_Jours = 0.877 (p=1.8084252071798773e-05)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Delai_Reservation_Jours, Target = Taux_Annulation_Pct
+   Baseline = 9.82
+   Simulated = 11.90
+   Change = +21.15%
+   R² = 0.9538
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (7) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Relation calculée détectée entre Duree_Sejour_Jours, Prix_Nuit_Euros, Revenu_Total_Euros : une de ces colonnes semble dérivée mathématiquement des autres (ex: Total = Prix × Quantité). Leur forte corrélation n'est donc pas un insight - c'est une conséquence directe du calcul, pas une découverte.
+   - Corrélation potentielle spurieuse entre Delai_Reservation_Jours et Taux_Annulation_Pct : facteur(s) confondant(s) détecté(s) : Canal_Booking. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Prix_Nuit_Euros et Taux_Annulation_Pct : facteur(s) confondant(s) détecté(s) : Canal_Booking. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Prix_Nuit_Euros et Delai_Reservation_Jours : facteur(s) confondant(s) détecté(s) : Canal_Booking. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Canal_Booking' explique 82.1% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [7, 9]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #11 : Restauration — restauration_gastronomie_2025.csv
+================================================================================
+📊 Dataset : 14 lignes, 6 colonnes
+   Colonnes numériques : ['Nombre_Couverts', 'Ticket_Moyen_Euros', 'Gaspillage_Alimentaire_Kg', 'Chiffre_Affaires_Jour']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Nombre_Couverts ↔ Ticket_Moyen_Euros = 0.984 (p=2.0359613789790638e-10)
+   Ticket_Moyen_Euros ↔ Gaspillage_Alimentaire_Kg = -0.765 (p=0.001449941271257876)
+   Nombre_Couverts ↔ Gaspillage_Alimentaire_Kg = -0.736 (p=0.002695451336781136)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Nombre_Couverts, Target = Chiffre_Affaires_Jour
+   Baseline = 2528.82
+   Simulated = 3208.82
+   Change = +26.89%
+   R² = 0.9946
+🚦 Exploitabilité : RED (score=20/100)
+   Données insuffisantes ou trop limitées — les résultats sont indicatifs uniquement.
+⚠️  Warnings (8) :
+   - Échantillon petit (14 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Relation calculée détectée entre Chiffre_Affaires_Jour, Nombre_Couverts, Ticket_Moyen_Euros : une de ces colonnes semble dérivée mathématiquement des autres (ex: Total = Prix × Quantité). Leur forte corrélation n'est donc pas un insight - c'est une conséquence directe du calcul, pas une découverte.
+   - Corrélation potentielle spurieuse entre Nombre_Couverts et Ticket_Moyen_Euros : facteur(s) confondant(s) détecté(s) : Jour_Semaine. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Ticket_Moyen_Euros et Gaspillage_Alimentaire_Kg : facteur(s) confondant(s) détecté(s) : Jour_Semaine. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Nombre_Couverts et Gaspillage_Alimentaire_Kg : facteur(s) confondant(s) détecté(s) : Jour_Semaine. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Jour_Semaine' explique 96.5% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [5, 7]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+   - Dimension temporelle détectée ('Jour_Semaine', 'Chiffre_Affaires_Jour') : les corrélations fortes observées peuvent refléter des effets saisonniers plutôt que des relations causales directes. Une hausse de prix en été (haute saison) apparaît corrélée à la fréquentation, par exemple — sans que le prix en soit la cause. Croiser avec une analyse par période avant de tirer des conclusions.
+
+================================================================================
+TEST #12 : Assurance — assurance_sinistres_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Age_Conducteur', 'Puissance_Vehicule_CV', 'Prime_Annuelle_Euros', 'Nombre_Sinistres', 'Cout_Indemnisation_Euros']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Puissance_Vehicule_CV ↔ Prime_Annuelle_Euros = 0.935 (p=3.351645992506218e-07)
+   Prime_Annuelle_Euros ↔ Cout_Indemnisation_Euros = 0.690 (p=0.004394942437319743)
+   Nombre_Sinistres ↔ Cout_Indemnisation_Euros = 0.671 (p=0.006224276087142795)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Puissance_Vehicule_CV, Target = Cout_Indemnisation_Euros
+   Baseline = 3393.33
+   Simulated = 5286.67
+   Change = +55.80%
+   R² = 0.2979
+🚦 Exploitabilité : RED (score=30/100)
+   Données insuffisantes ou trop limitées — les résultats sont indicatifs uniquement.
+⚠️  Warnings (6) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 10 paires de variables testées, seulement 3 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Puissance_Vehicule_CV et Prime_Annuelle_Euros : facteur(s) confondant(s) détecté(s) : Type_Couverture, Nombre_Sinistres, Cout_Indemnisation_Euros. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Prime_Annuelle_Euros et Cout_Indemnisation_Euros : facteur(s) confondant(s) détecté(s) : Nombre_Sinistres. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - R² faible (0.30) pour la simulation sur 'Puissance_Vehicule_CV' : le modèle explique moins de 30% de la variance de 'Cout_Indemnisation_Euros' - la projection est peu fiable, à interpréter avec beaucoup de prudence.
+   - Point(s) influent(s) détecté(s) (ligne(s) [3, 13]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #13 : Énergie — energie_batiments_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Surface_Chauffee_M2', 'Temperature_Exterieure_C', 'Consommation_KWh', 'Facture_Electricite_Euros']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Consommation_KWh ↔ Facture_Electricite_Euros = 1.000 (p=0.0)
+   Temperature_Exterieure_C ↔ Consommation_KWh = -0.792 (p=0.0004317629927377076)
+   Temperature_Exterieure_C ↔ Facture_Electricite_Euros = -0.792 (p=0.0004317629927377076)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Temperature_Exterieure_C, Target = Consommation_KWh
+   Baseline = 3586.67
+   Simulated = 3173.95
+   Change = -11.51%
+   R² = 0.6274
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (8) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 6 paires de variables testées, seulement 3 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Consommation_KWh et Facture_Electricite_Euros : facteur(s) confondant(s) détecté(s) : Batiment_ID. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Temperature_Exterieure_C et Consommation_KWh : facteur(s) confondant(s) détecté(s) : Batiment_ID. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Temperature_Exterieure_C et Facture_Electricite_Euros : facteur(s) confondant(s) détecté(s) : Batiment_ID. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Usage_Batiment' explique 100.0% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Sous-groupe significatif détecté : 'Isolation_DPE' explique 100.0% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [0, 5]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #14 : Marketing Digital — marketing_digital_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Impressions', 'Cliquer_CTR_Pct', 'Cout_Par_Clic_CPC', 'Conversions', 'Cout_Acquisition_CAC']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Cout_Par_Clic_CPC ↔ Cout_Acquisition_CAC = 0.985 (p=2.910696206929864e-11)
+   Cliquer_CTR_Pct ↔ Cout_Par_Clic_CPC = 0.847 (p=6.685119879497168e-05)
+   Impressions ↔ Cliquer_CTR_Pct = -0.843 (p=7.846089591775538e-05)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Cout_Par_Clic_CPC, Target = Cout_Acquisition_CAC
+   Baseline = 103.04
+   Simulated = 115.35
+   Change = +11.95%
+   R² = 0.9698
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (6) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 10 paires de variables testées, seulement 7 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Cout_Par_Clic_CPC et Cout_Acquisition_CAC : facteur(s) confondant(s) détecté(s) : Canal_Ad. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Cliquer_CTR_Pct et Cout_Par_Clic_CPC : facteur(s) confondant(s) détecté(s) : Canal_Ad. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Impressions et Cliquer_CTR_Pct : facteur(s) confondant(s) détecté(s) : Canal_Ad. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Canal_Ad' explique 75.5% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+
+================================================================================
+TEST #15 : SaaS — saas_abonnements_2025.csv
+================================================================================
+❌ ERREUR : AttributeError: 'LogisticRegressionResult' object has no attribute 'slope'
+
+================================================================================
+TEST #16 : Cybersécurité — cybersecurite_incidents_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Nb_Systemes_Touches', 'Heures_Detection', 'Heures_Resolution', 'Employes_Affectes', 'Cout_Incident_Euros']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Nb_Systemes_Touches ↔ Employes_Affectes = 0.997 (p=1.6855513834937946e-15)
+   Heures_Resolution ↔ Employes_Affectes = 0.973 (p=1.2209340997931183e-09)
+   Employes_Affectes ↔ Cout_Incident_Euros = 0.971 (p=1.6692410292894564e-09)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Nb_Systemes_Touches, Target = Cout_Incident_Euros
+   Baseline = 167993.33
+   Simulated = 217809.16
+   Change = +29.65%
+   R² = 0.9145
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (7) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 10 paires de variables testées, seulement 6 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Nb_Systemes_Touches et Employes_Affectes : facteur(s) confondant(s) détecté(s) : Incident_ID, Criticite. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Heures_Resolution et Employes_Affectes : facteur(s) confondant(s) détecté(s) : Incident_ID, Criticite. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Employes_Affectes et Cout_Incident_Euros : facteur(s) confondant(s) détecté(s) : Incident_ID, Criticite. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Criticite' explique 86.6% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [4, 7]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+
+================================================================================
+TEST #17 : Tourisme — tourisme_frequentation_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 7 colonnes
+   Colonnes numériques : ['Temperature_Moy_C', 'Prix_Billet_Euros', 'Visiteurs_Jour', 'Recettes_Boutique_Euros']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Visiteurs_Jour ↔ Recettes_Boutique_Euros = 1.000 (p=0.0)
+   Temperature_Moy_C ↔ Prix_Billet_Euros = 0.957 (p=2.2345360323172952e-08)
+   Prix_Billet_Euros ↔ Visiteurs_Jour = 0.685 (p=0.004802679222798497)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Prix_Billet_Euros, Target = Visiteurs_Jour
+   Baseline = 971.33
+   Simulated = 589.83
+   Change = -39.28%
+   R² = 0.4697
+🚦 Exploitabilité : ORANGE (score=45/100)
+   Interprétation prudente — plusieurs limites détectées, croiser avec l'expertise métier.
+⚠️  Warnings (7) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Corrélation potentielle spurieuse entre Visiteurs_Jour et Recettes_Boutique_Euros : facteur(s) confondant(s) détecté(s) : Semaine, Saison, Vacances_Scolaires, Prix_Billet_Euros. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Temperature_Moy_C et Prix_Billet_Euros : facteur(s) confondant(s) détecté(s) : Semaine, Saison. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Corrélation potentielle spurieuse entre Prix_Billet_Euros et Visiteurs_Jour : facteur(s) confondant(s) détecté(s) : Semaine, Saison. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Saison' explique 92.4% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - Point(s) influent(s) détecté(s) (ligne(s) [10]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.
+   - Dimension temporelle détectée ('Semaine', 'Saison', 'Visiteurs_Jour') : les corrélations fortes observées peuvent refléter des effets saisonniers plutôt que des relations causales directes. Une hausse de prix en été (haute saison) apparaît corrélée à la fréquentation, par exemple — sans que le prix en soit la cause. Croiser avec une analyse par période avant de tirer des conclusions.
+
+================================================================================
+TEST #18 : Agriculture — agriculture_rendement_2025.csv
+================================================================================
+📊 Dataset : 15 lignes, 6 colonnes
+   Colonnes numériques : ['Pluviometrie_Mm', 'Engrais_Kg_Ha', 'Temperature_Moy_C', 'Rendement_Quintal_Ha']
+🔍 Validation : 0 doublon(s), colonnes avec NaN : []
+📈 Top corrélations :
+   Pluviometrie_Mm ↔ Engrais_Kg_Ha = 0.991 (p=1.0621462056546805e-12)
+   Engrais_Kg_Ha ↔ Temperature_Moy_C = -0.985 (p=2.8832199326408548e-11)
+   Pluviometrie_Mm ↔ Temperature_Moy_C = -0.972 (p=1.478219998271609e-09)
+✅ Aucune anomalie détectée
+💡 Simulation :
+   Feature = Pluviometrie_Mm, Target = Rendement_Quintal_Ha
+   Baseline = 56.80
+   Simulated = 56.90
+   Change = +0.18%
+   R² = 0.0004
+🚦 Exploitabilité : RED (score=15/100)
+   Données insuffisantes ou trop limitées — les résultats sont indicatifs uniquement.
+⚠️  Warnings (6) :
+   - Échantillon petit (15 lignes) : les résultats statistiques (corrélations, détection d'anomalies, régression) sont indicatifs, pas robustes. Recommandé : 30+ lignes.
+   - Comparaisons multiples : sur 6 paires de variables testées, seulement 3 restent statistiquement significatives après correction (Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation isolée forte peut apparaître par hasard - se fier au champ 'significant_after_correction' de chaque paire plutôt qu'à sa seule valeur.
+   - Corrélation potentielle spurieuse entre Engrais_Kg_Ha et Temperature_Moy_C : facteur(s) confondant(s) détecté(s) : Type_Sol. Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe.
+   - Sous-groupe significatif détecté : 'Type_Sol' explique 88.0% de la variance de la cible. Considérez une analyse segmentée par cette variable pour des insights plus précis.
+   - R² faible (0.00) pour la simulation sur 'Pluviometrie_Mm' : le modèle explique moins de 30% de la variance de 'Rendement_Quintal_Ha' - la projection est peu fiable, à interpréter avec beaucoup de prudence.
+   - Point(s) influent(s) détecté(s) (ligne(s) [6, 8]) : ce résultat dépend fortement d'un ou plusieurs points spécifiques - une corrélation ou une régression peut être largement déformée par un seul point atypique. Vérifier ces valeurs avant de s'y fier.

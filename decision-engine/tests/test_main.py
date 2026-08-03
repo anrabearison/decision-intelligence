@@ -6,6 +6,12 @@ pas de persistance) - cf. SPEC.md section 5.
 """
 import io
 import os
+import sys
+from pathlib import Path
+
+# Ajouter le répertoire parent au PYTHONPATH pour importer main
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from fastapi.testclient import TestClient
 from main import app
 

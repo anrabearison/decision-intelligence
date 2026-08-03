@@ -10,6 +10,8 @@ import pytest
 from decision_core.regression import (
     fit_simple_regression,
     fit_multivariate_regression,
+    fit_logistic_regression,
+    is_binary_target,
     InsufficientDataError,
 )
 from decision_core.simulation import simulate_scenario
@@ -25,21 +27,21 @@ class TestSimpleRegressionVentes:
     def test_coefficients(self):
         df = load("ventes_test.csv")
         model = fit_simple_regression(df, target="Ventes", feature="Prix")
-        assert model["slope"] == pytest.approx(-0.0959, abs=0.001)
-        assert model["intercept"] == pytest.approx(110.118, abs=0.01)
+        assert model.slope == pytest.approx(-0.0959, abs=0.001)
+        assert model.intercept == pytest.approx(110.118, abs=0.01)
 
     def test_r_squared(self):
         df = load("ventes_test.csv")
         model = fit_simple_regression(df, target="Ventes", feature="Prix")
-        assert model["r_squared"] == pytest.approx(0.788, abs=0.001)
+        assert model.r_squared == pytest.approx(0.788, abs=0.001)
 
 
 class TestSimpleRegressionTroupeau:
     def test_coefficients(self):
         df = load("troupeau_test.csv")
         model = fit_simple_regression(df, target="Ventes_lait", feature="Temperature")
-        assert model["slope"] == pytest.approx(-8.564, abs=0.01)
-        assert model["r_squared"] == pytest.approx(0.782, abs=0.001)
+        assert model.slope == pytest.approx(-8.564, abs=0.01)
+        assert model.r_squared == pytest.approx(0.782, abs=0.001)
 
 
 class TestMultivariateRegressionTresorerie:
@@ -48,19 +50,13 @@ class TestMultivariateRegressionTresorerie:
         model = fit_multivariate_regression(
             df, target="Solde_fin_mois", features=["Nouveaux_clients", "Charges_variables"]
         )
-        assert model["intercept"] == pytest.approx(995.0, abs=0.5)
-        assert model["coefficients"]["Nouveaux_clients"] == pytest.approx(594.09, abs=0.5)
-        assert model["coefficients"]["Charges_variables"] == pytest.approx(-0.277, abs=0.01)
+        assert model.intercept == pytest.approx(995.0, abs=0.5)
+        assert model.coefficients["Nouveaux_clients"] == pytest.approx(594.09, abs=0.5)
+        assert model.coefficients["Charges_variables"] == pytest.approx(-0.277, abs=0.01)
 
 
 class TestMultivariateRegressionDetectsMulticollinearity:
     def test_warns_on_near_perfect_collinear_features(self):
-        # Cas empirique trouvé en audit expert : deux variables
-        # quasi-colinéaires (Charges_B ≈ 2.001 * Charges_A) produisent
-        # des coefficients numériquement valides mais statistiquement
-        # absurdes (signes/magnitudes instables) - condition number
-        # ~364000 dans le cas original, bien au-dessus du seuil usuel
-        # de préoccupation (30) et sévère (100) (Belsley/Kuh/Welsch 1980).
         np.random.seed(1)
         n = 40
         charges_a = np.random.uniform(100, 1000, n)
@@ -68,8 +64,8 @@ class TestMultivariateRegressionDetectsMulticollinearity:
         y = 50 + 0.01 * charges_a + np.random.normal(0, 5, n)
         df = pd.DataFrame({"Charges_A": charges_a, "Charges_B": charges_b, "Y": y})
         model = fit_multivariate_regression(df, target="Y", features=["Charges_A", "Charges_B"])
-        assert model["condition_number"] > 100
-        assert model["multicollinearity_warning"] is True
+        assert model.condition_number > 100
+        assert model.multicollinearity_warning is True
 
     def test_no_warning_on_independent_features(self):
         np.random.seed(2)
@@ -79,8 +75,8 @@ class TestMultivariateRegressionDetectsMulticollinearity:
         y = 50 + 0.01 * a + 0.02 * b + np.random.normal(0, 5, n)
         df = pd.DataFrame({"A": a, "B": b, "Y": y})
         model = fit_multivariate_regression(df, target="Y", features=["A", "B"])
-        assert model["condition_number"] < 30
-        assert model["multicollinearity_warning"] is False
+        assert model.condition_number < 30
+        assert model.multicollinearity_warning is False
 
 
 class TestSimulateScenarioRetail:
@@ -90,37 +86,35 @@ class TestSimulateScenarioRetail:
             df, target="Ventes", feature="Prix", change_pct=0.05
         )
         # baseline = moyenne des Ventes observées
-        assert result["baseline"] == pytest.approx(67.3, abs=0.01)
+        assert result.baseline == pytest.approx(67.3, abs=0.01)
         # une hausse de prix doit faire baisser la prédiction (pente negative)
-        assert result["simulated"] < result["baseline"]
+        assert result.simulated < result.baseline
 
     def test_returns_change_pct(self):
         df = load("ventes_test.csv")
         result = simulate_scenario(
             df, target="Ventes", feature="Prix", change_pct=0.05
         )
-        expected_change_pct = (result["simulated"] - result["baseline"]) / result["baseline"] * 100
-        assert result["change_pct"] == pytest.approx(expected_change_pct, abs=0.01)
+        expected_change_pct = (result.simulated - result.baseline) / result.baseline * 100
+        assert result.change_pct == pytest.approx(expected_change_pct, abs=0.01)
 
 
 class TestSimulateScenarioNearZeroBaseline:
     def test_change_pct_unreliable_when_baseline_near_zero(self):
-        # cible dont la moyenne est quasi nulle relativement à sa dispersion
-        # (mean=0.05, std≈4.85) : un pourcentage de variation serait trompeur.
         df = pd.DataFrame({
             "X": list(range(1, 21)),
             "Y": [9.45, 2.68, 0.98, -8.82, -0.88, -1.27, 0.09, -2.63, 0.28, -1.88,
                   -6.07, 4.93, 4.91, 9.05, 0.75, -1.52, -2.22, -7.23, 5.41, -5.0],
         })
         result = simulate_scenario(df, target="Y", feature="X", change_pct=0.1)
-        assert result["change_pct_reliable"] is False
-        assert result["change_pct"] is None
+        assert result.change_pct_reliable is False
+        assert result.change_pct is None
 
     def test_change_pct_reliable_when_baseline_not_near_zero(self):
         df = load("ventes_test.csv")
         result = simulate_scenario(df, target="Ventes", feature="Prix", change_pct=0.05)
-        assert result["change_pct_reliable"] is True
-        assert result["change_pct"] is not None
+        assert result.change_pct_reliable is True
+        assert result.change_pct is not None
 
 
 class TestSimulateScenarioPropagatesInsufficientData:
@@ -148,10 +142,9 @@ class TestRegressionHandlesMissingValues:
             "X": [1, 2, 3, 4, 5, None, 7, 8],
             "Y": [2, 4, 6, 8, 10, 12, None, 16],
         })
-        # lignes valides restantes (X et Y non-nan simultanément) : (1,2)(2,4)(3,6)(4,8)(5,10)(8,16)
         model = fit_simple_regression(df, target="Y", feature="X")
-        assert model["slope"] == pytest.approx(2.0, abs=0.01)
-        assert not (model["slope"] != model["slope"])  # pas NaN
+        assert model.slope == pytest.approx(2.0, abs=0.01)
+        assert not (model.slope != model.slope)  # pas NaN
 
     def test_multivariate_regression_drops_nan_rows(self):
         df = pd.DataFrame({
@@ -160,7 +153,8 @@ class TestRegressionHandlesMissingValues:
             "Y": [10, 12, 14, 16, 18, None, 22, 24, 26, 28],
         })
         model = fit_multivariate_regression(df, target="Y", features=["A", "B"])
-        assert model["r_squared"] == model["r_squared"]  # pas NaN
+        assert model.r_squared == model.r_squared  # pas NaN
+
 
     def test_raises_insufficient_data_error_when_too_few_rows_after_dropna(self):
         df = pd.DataFrame({"X": [1, None, None, None], "Y": [2, None, None, 8]})
@@ -190,3 +184,46 @@ class TestRegressionHandlesTooFewRows:
         df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "Y": [5, 6]})
         with pytest.raises(InsufficientDataError):
             fit_multivariate_regression(df, target="Y", features=["A", "B"])
+
+
+class TestLogisticRegressionBinaryTarget:
+    def test_fit_logistic_regression_binary_target(self):
+        """Test que la régression logistique fonctionne sur une cible binaire."""
+        df = pd.DataFrame({
+            "X": [1, 2, 3, 4, 5, 6, 7, 8],
+            "Y": [0, 0, 0, 1, 1, 1, 1, 1]  # Cible binaire
+        })
+        model = fit_logistic_regression(df, target="Y", feature="X")
+        
+        # Vérifier que le modèle type est bien "logistic"
+        assert model.model_type == "logistic"
+        
+        # Vérifier que le pseudo R² est calculé et est entre 0 et 1
+        assert 0 <= model.r_squared <= 1
+        
+        # Vérifier que le coefficient et l'intercept sont des nombres
+        assert isinstance(model.coefficient, float)
+        assert isinstance(model.intercept, float)
+        
+        # Vérifier que le coefficient est positif (plus X augmente, plus Y tend vers 1)
+        assert model.coefficient > 0
+
+    def test_is_binary_target_detects_binary_columns(self):
+        """Test que la détection de cible binaire fonctionne."""
+        df = pd.DataFrame({
+            "binary": [0, 1, 0, 1, 0],
+            "non_binary": [1, 2, 3, 4, 5],
+        })
+        assert is_binary_target(df["binary"]) is True
+        assert is_binary_target(df["non_binary"]) is False
+
+    def test_fit_simple_regression_auto_switches_to_logistic(self):
+        """Test que fit_simple_regression bascule automatiquement sur logistique pour cible binaire."""
+        df = pd.DataFrame({
+            "X": [1, 2, 3, 4, 5, 6],
+            "Y": [0, 0, 0, 1, 1, 1]
+        })
+        model = fit_simple_regression(df, target="Y", feature="X")
+        
+        # Vérifier que le modèle retourné est bien LogisticRegressionResult
+        assert model.model_type == "logistic"

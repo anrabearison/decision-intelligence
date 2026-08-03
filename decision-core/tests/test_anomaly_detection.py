@@ -12,12 +12,12 @@ class TestAnomalyDetectionClearOutlier:
         # 9 valeurs "normales" autour de 100 + un outlier evident à 900
         series = pd.Series([98, 101, 99, 102, 100, 97, 103, 100, 101, 900])
         result = detect_anomalies_iqr(series)
-        assert 9 in result["indices"]  # index du 900
+        assert 9 in result.indices  # index du 900
 
     def test_no_outlier_on_uniform_data(self):
         series = pd.Series([10, 11, 10, 12, 11, 10, 11, 12, 10, 11])
         result = detect_anomalies_iqr(series)
-        assert result["indices"] == []
+        assert result.indices == []
 
 
 class TestAnomalyDetectionSmallSampleWarning:
@@ -26,13 +26,14 @@ class TestAnomalyDetectionSmallSampleWarning:
             __file__.replace("test_anomaly_detection.py", "fixtures/troupeau_test.csv")
         )
         result = detect_anomalies_iqr(df["Temperature"])
-        assert result["reliable"] is False
-        assert result["n"] == 10
+        assert result.reliable is False
+        assert result.n == 10
 
     def test_large_enough_sample_is_reliable(self):
         series = pd.Series(list(range(50)))
         result = detect_anomalies_iqr(series)
-        assert result["reliable"] is True
+        assert result.reliable is True
+
 
 
 class TestAnomalyDetectionOnNonNumeric:
