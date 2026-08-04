@@ -40,6 +40,8 @@ class StepPatternResult:
         n_bins: Nombre de bins utilisés pour la discrétisation.
         r2_linear: R² du modèle linéaire simple.
         eta_squared_binned: Eta-carré du modèle par bins.
+        p_value: P-value de l'ANOVA sur les bins.
+        f_statistic: Statistique F de l'ANOVA sur les bins.
         bin_boundaries: Bornes des bins de discrétisation.
     """
     feature: str
@@ -47,6 +49,8 @@ class StepPatternResult:
     n_bins: int
     r2_linear: float
     eta_squared_binned: float
+    p_value: float
+    f_statistic: float
     bin_boundaries: list[float]
 
     def to_dict(self) -> dict[str, Any]:

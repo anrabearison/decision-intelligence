@@ -97,6 +97,16 @@ class TestDetectSignificantSubgroups:
         
         assert len(subgroups) == 0
 
+    def test_does_not_detect_unreliable_small_groups(self):
+        """Test que les petits groupes sont marqués non fiables et ignorés."""
+        df = pd.DataFrame({
+            "target": [1, 2, 3, 10, 11, 12],
+            "group": ["A", "A", "B", "C", "C", "D"],
+        })
+
+        subgroups = detect_significant_subgroups(df, "target", threshold_eta_squared=0.01)
+        assert len(subgroups) == 0
+
     def test_includes_group_means_in_result(self):
         """Test que les moyennes par groupe sont incluses dans le résultat."""
         df = pd.DataFrame({

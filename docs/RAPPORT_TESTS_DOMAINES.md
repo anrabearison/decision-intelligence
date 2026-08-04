@@ -96,6 +96,7 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 * **Analyse & Critique Métier** :
   - ~~**Biais d'Indication Médical** : Le moteur prédit qu'augmenter le dosage dégrade la santé des patients ! C'est simplement que les cas les plus graves reçoivent des doses plus fortes. Un médecin suivant ce conseil commettrait une erreur grave.~~
 * <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P0)** : La fonction `detect_confounders` identifie la sévérité initiale comme facteur confondant et génère un avertissement de corrélation spurieuse, empêchant l'erreur d'interprétation.</span>
+* <span style="color: #2ea043;">**Nota** : la détection des sous-groupes et des step patterns a été renforcée par un test F d'ANOVA et un garde-fou de taille minimale par groupe, réduisant les faux positifs sur de petits échantillons.</span>
 
 ### Test 7 : Éducation & E-Learning
 * **Fichier de test** : `examples/education_elearning_2025.csv`

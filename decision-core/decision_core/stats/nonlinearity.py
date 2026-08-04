@@ -18,6 +18,8 @@ Choix méthodologiques :
   de bins à la taille de l'échantillon
 - Significativité stricte du coefficient quadratique (p < 0.05) : évite les
   faux positifs sur du bruit linéaire
+- Significativité ANOVA du step pattern (p < 0.05) : protège contre le
+  gonflement artificiel de l'eta² sur de petits groupes par quantile
 - Comparaison eta² vs R² : seuil de 0.05 pour considérer qu'un modèle par
   paliers est nettement meilleur qu'un modèle linéaire
 """
@@ -157,8 +159,8 @@ def _compute_eta_squared_continuous(
         # Si pas assez de valeurs uniques pour les quantiles
         return 0.0
 
-    from decision_core.stats.anova import compute_eta_squared
-    return compute_eta_squared(y, x_binned)
+    from decision_core.stats.anova import compute_eta_squared_with_significance
+    return compute_eta_squared_with_significance(y, x_binned).eta_squared
 
 
 def detect_step_pattern(
@@ -207,11 +209,21 @@ def detect_step_pattern(
     ss_tot = np.sum((y - np.mean(y)) ** 2)
     r2_linear = 1 - (ss_res_linear / ss_tot) if ss_tot > 0 else 0
 
-    # Calcul de l'eta² par bins
-    eta_squared_binned = _compute_eta_squared_continuous(x, y, n_bins)
+    # Calcul de l'eta² par bins et du test F d'ANOVA
+    try:
+        x_binned = pd.qcut(x, n_bins, duplicates='drop')
+    except ValueError:
+        return None
+
+    from decision_core.stats.anova import compute_eta_squared_with_significance
+    anova_result = compute_eta_squared_with_significance(y, x_binned)
+    eta_squared_binned = anova_result.eta_squared
 
     # Condition : l'eta² par bins doit être nettement meilleur que le R² linéaire
-    if eta_squared_binned > r2_linear + ETA_SQUARED_IMPROVEMENT_THRESHOLD:
+    # et la structure par paliers doit être statistiquement significative.
+    if (anova_result.reliable and
+        anova_result.p_value <= 0.05 and
+        eta_squared_binned > r2_linear + ETA_SQUARED_IMPROVEMENT_THRESHOLD):
         # Calcul des bornes des bins
         try:
             _, bin_edges = pd.qcut(x, n_bins, retbins=True, duplicates='drop')
@@ -225,6 +237,8 @@ def detect_step_pattern(
             n_bins=n_bins,
             r2_linear=float(r2_linear),
             eta_squared_binned=float(eta_squared_binned),
+            p_value=float(anova_result.p_value),
+            f_statistic=float(anova_result.f_statistic),
             bin_boundaries=bin_boundaries
         )
 

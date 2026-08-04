@@ -52,12 +52,15 @@ def encode_categorical_features(
 def detect_significant_subgroups(
     df: pd.DataFrame,
     target: str,
-    threshold_eta_squared: float = 0.14
+    threshold_eta_squared: float = 0.14,
+    min_group_size: int = 2
 ) -> list[dict]:
     """Identifie les colonnes catégorielles qui segmentent significativement les données via eta-carré.
 
     L'eta-carré (η²) mesure la proportion de variance de la target expliquée par
-    la variable catégorielle. Interprétation usuelle :
+    la variable catégorielle. Cette fonction applique également un test F d'ANOVA
+    pour ne conserver que les effets statistiquement significatifs.
+    Interprétation usuelle :
     - 0.01 : petit effet
     - 0.06 : effet moyen
     - 0.14 : grand effet (seuil par défaut)
@@ -66,14 +69,16 @@ def detect_significant_subgroups(
         df: DataFrame pandas contenant les données.
         target: Nom de la colonne cible numérique.
         threshold_eta_squared: Seuil d'eta-carré pour considérer un sous-groupe significatif.
+        min_group_size: Taille minimale par groupe pour considérer le test ANOVA fiable.
 
     Returns:
-        Liste de dictionnaires contenant les sous-groupes significatifs avec leur eta-carré.
+        Liste de dictionnaires contenant les sous-groupes significatifs avec leur eta-carré,
+        la p-value ANOVA, la statistique F et les moyennes de groupe.
     """
     if not pd.api.types.is_numeric_dtype(df[target]):
         return []
     
-    from decision_core.stats.anova import compute_eta_squared
+    from decision_core.stats.anova import compute_eta_squared_with_significance
     significant_subgroups = []
     
     for col in df.columns:
@@ -84,14 +89,18 @@ def detect_significant_subgroups(
         if pd.api.types.is_string_dtype(df[col]) or df[col].dtype == 'object':
             unique_count = df[col].nunique()
             if unique_count <= 10 and unique_count > 1:
-                # Calcul de l'eta-carré (one-way ANOVA) via fonction utilitaire
-                eta_squared = compute_eta_squared(df[target], df[col])
+                # Calcul de l'eta-carré + test F d'ANOVA
+                result = compute_eta_squared_with_significance(
+                    df[target], df[col], min_group_size=min_group_size
+                )
                 
-                if eta_squared >= threshold_eta_squared:
+                if result.reliable and result.p_value <= 0.05 and result.eta_squared >= threshold_eta_squared:
                     groups = df.groupby(col)[target]
                     significant_subgroups.append({
                         "column": col,
-                        "eta_squared": eta_squared,
+                        "eta_squared": result.eta_squared,
+                        "p_value": result.p_value,
+                        "f_statistic": result.f_statistic,
                         "n_groups": unique_count,
                         "group_means": groups.mean().to_dict()
                     })

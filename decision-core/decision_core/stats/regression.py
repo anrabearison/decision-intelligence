@@ -55,55 +55,60 @@ def is_binary_target(series: pd.Series) -> bool:
     return unique_values == 2
 
 
-def detect_confounders(df: pd.DataFrame, target: str, feature: str, threshold: float = 0.3) -> list[str]:
+def detect_confounders(
+    df: pd.DataFrame,
+    target: str,
+    feature: str,
+    threshold: float = 0.14,
+    min_group_size: int = 5
+) -> list[str]:
     """Détecte les facteurs confondants potentiels pour une corrélation feature-target.
-    
-    Un facteur confondant est une variable catégorielle qui est corrélée
-    simultanément avec la feature et la target, suggérant que la corrélation
-    observée pourrait être spurieuse.
-    
+
+    Un facteur confondant est une variable catégorielle qui est associée à la
+    fois à la target et à la feature. L'approche classique par Pearson après
+    factorisation est sensible à l'ordre des modalités et ne capture pas les
+    relations non monotones en U ou en cloche. Ici, nous utilisons eta² + ANOVA
+    à un facteur pour mesurer la proportion de variance expliquée, avec une
+    p-value et un garde-fou sur la taille minimale des groupes.
+
     Args:
         df: DataFrame pandas contenant les données.
         target: Nom de la colonne cible.
         feature: Nom de la colonne feature.
-        threshold: Seuil de corrélation pour considérer une variable comme confondant.
-    
+        threshold: Seuil d'eta-carré pour considérer un facteur comme suffisamment
+            fort pour être un confondant potentiel.
+        min_group_size: Taille minimale par groupe pour que le test ANOVA soit fiable.
+
     Returns:
         Liste des noms de colonnes catégorielles potentiellement confondantes.
     """
+    from decision_core.stats.anova import compute_eta_squared_with_significance
+
     confounders = []
     
-    # Parcourir toutes les colonnes catégorielles (texte)
     for col in df.columns:
         if col == target or col == feature:
             continue
         
-        # Vérifier si la colonne est catégorielle (texte ou peu de valeurs uniques)
         if pd.api.types.is_string_dtype(df[col]) or df[col].nunique() <= 10:
-            # Calculer la corrélation point-bisériale avec la target
-            # Pour les variables catégorielles, on utilise la corrélation de Pearson
-            # après encodage one-hot (première modalité)
             try:
-                # Encodage simple : convertir en numérique via factorize
-                encoded = pd.factorize(df[col])[0]
-                # Ajouter explicitement l'index pour éviter la perte d'alignement
-                encoded_series = pd.Series(encoded, index=df.index)
-                
-                if pd.api.types.is_numeric_dtype(df[target]):
-                    corr_target = abs(df[target].corr(encoded_series))
-                else:
-                    corr_target = 0
-                
-                if pd.api.types.is_numeric_dtype(df[feature]):
-                    corr_feature = abs(df[feature].corr(encoded_series))
-                else:
-                    corr_feature = 0
-                
-                # Si la variable est corrélée avec les deux, c'est un facteur confondant potentiel
-                if corr_target >= threshold and corr_feature >= threshold:
+                if not pd.api.types.is_numeric_dtype(df[target]):
+                    continue
+                if not pd.api.types.is_numeric_dtype(df[feature]):
+                    continue
+
+                target_result = compute_eta_squared_with_significance(
+                    df[target], df[col], min_group_size=min_group_size
+                )
+                feature_result = compute_eta_squared_with_significance(
+                    df[feature], df[col], min_group_size=min_group_size
+                )
+
+                if (target_result.reliable and feature_result.reliable and
+                    target_result.p_value <= 0.05 and feature_result.p_value <= 0.05 and
+                    target_result.eta_squared >= threshold and feature_result.eta_squared >= threshold):
                     confounders.append(col)
             except Exception:
-                # Ignorer les erreurs de calcul de corrélation
                 pass
     
     return confounders

@@ -13,9 +13,11 @@ All notable changes to decision-core will be documented in this file.
 
 ### Refactored
 
-- **Élimination de la duplication de code pour eta²** :
-  - Création de `decision_core.stats.anova.compute_eta_squared()` pour centraliser le calcul de la proportion de variance expliquée.
-  - Utilisation de cette fonction partagée dans `categorical.py` (détection de sous-groupes catégoriels) et `nonlinearity.py` (détection de paliers continus).
+- **Correction de fond de l'eta² brut** :
+  - Ajout de `decision_core.stats.anova.compute_eta_squared_with_significance()` pour calculer eta², la statistique F et la p-value d'un ANOVA à un facteur.
+  - Conservation de `compute_eta_squared()` pour compatibilité en tant qu'extraction d'eta².
+  - Application de la logique d'ANOVA à `detect_significant_subgroups()`, `detect_step_pattern()` et `detect_confounders()`.
+  - Ajout d'un garde-fou `min_group_size` pour marquer les calculs non fiables quand un groupe est trop petit.
 
 ### Added
 
