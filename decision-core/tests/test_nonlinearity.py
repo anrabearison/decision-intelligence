@@ -167,6 +167,7 @@ class TestIntegrationWithGenerateReport:
         warnings = report.warnings
         nonlinearity_warnings = [w for w in warnings if "non-linéaire" in w.lower()]
         assert len(nonlinearity_warnings) > 0
+        assert any("p ajustée" in w.lower() for w in nonlinearity_warnings)
 
 
 class TestRealWorldExamples:
@@ -182,12 +183,9 @@ class TestRealWorldExamples:
         
         result = detect_quadratic_pattern(df, "Consommation_KWh", "Temperature_Exterieure_C")
         
-        assert result is not None
-        assert isinstance(result, QuadraticPatternResult)
-        assert result.pattern_type == "u_curve"
-        # L'amélioration du R² ajusté réelle est d'environ 0.0052, p-value d'environ 0.3008
-        assert 0.004 < (result.r2_quadratic_adj - result.r2_linear_adj) < 0.006
-        assert 0.29 < result.p_value < 0.31
+        # Avec les seuils quadratiques recalibrés (gain R² ajusté +0.04, p ≤ 0.10),
+        # ce signal faible n'est plus retenu malgré un p-value brute proche de 0.30.
+        assert result is None
 
     def test_real_world_logistics_step_pattern(self):
         """Teste le cas réel #5 (Logistique) : Poids_Colis_Kg -> Frais_Port_Euros."""

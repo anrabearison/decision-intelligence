@@ -2,13 +2,19 @@
 Détection de warnings contextuels pour decision-core.
 """
 import re
+import numpy as np
 import pandas as pd
+from scipy import stats
 from decision_core.stats.profiling import MAX_COLUMNS_FOR_CORRELATION
 from decision_core.quality.anomaly_detection import MIN_RELIABLE_SAMPLE_SIZE
 from decision_core.stats.regression import validate_regression_inputs
 from decision_core.stats.influence_detection import detect_influential_points
 from decision_core.stats.derived_columns import detect_derived_relationships
-from decision_core.stats.nonlinearity import detect_quadratic_pattern, detect_step_pattern
+from decision_core.stats.nonlinearity import (
+    QUADRATIC_P_VALUE_THRESHOLD,
+    detect_quadratic_pattern,
+    detect_step_pattern,
+)
 from decision_core.models.nonlinearity import StepPatternResult
 
 
@@ -252,31 +258,14 @@ def _build_nonlinearity_warnings(
     nonlinearity_patterns = []
 
     # Limiter l'analyse aux paires de top_correlations pour éviter l'explosion combinatoire
+    quadratic_results = []
     for corr in top_correlations:
         feature = corr["column_a"]
         target = corr["column_b"]
 
-        # Détection de pattern quadratique
         quadratic_result = detect_quadratic_pattern(df, target, feature)
         if quadratic_result:
-            nonlinearity_patterns.append(quadratic_result)
-            if quadratic_result.pattern_type == "u_curve":
-                warnings.append(
-                    f"Relation non-linéaire détectée (courbe en U) entre "
-                    f"'{quadratic_result.feature}' et '{quadratic_result.target}' : "
-                    f"la régression linéaire peut être trompeuse sur cette paire. "
-                    f"Les effets ne sont pas proportionnels - une augmentation de "
-                    f"la feature peut avoir un impact différent selon le niveau de départ."
-                )
-            elif quadratic_result.pattern_type == "optimum":
-                warnings.append(
-                    f"Relation non-linéaire détectée (optimum) entre "
-                    f"'{quadratic_result.feature}' et '{quadratic_result.target}' : "
-                    f"la régression linéaire peut être trompeuse sur cette paire. "
-                    f"Il existe un niveau optimal de la feature au-delà duquel "
-                    f"l'effet s'inverse - la régression linéaire ne capture pas "
-                    f"cette dynamique."
-                )
+            quadratic_results.append(quadratic_result)
 
         # Détection de pattern par paliers
         step_result = detect_step_pattern(df, target, feature)
@@ -289,6 +278,44 @@ def _build_nonlinearity_warnings(
                 f"La relation fonctionne par tranches de tarification ou seuils, "
                 f"pas par une droite continue."
             )
+
+    if quadratic_results:
+        raw_p_values = np.array([pattern.p_value for pattern in quadratic_results])
+        adjusted_p_values = stats.false_discovery_control(raw_p_values, method="bh")
+
+        for pattern, adjusted_p in zip(quadratic_results, adjusted_p_values):
+            if adjusted_p > QUADRATIC_P_VALUE_THRESHOLD:
+                continue
+
+            nonlinearity_patterns.append(pattern)
+            p_validation = (
+                f"p ajustée = {adjusted_p:.2f}"
+                f" (p brute = {pattern.p_value:.2f})"
+            )
+            if pattern.p_value <= 0.05:
+                discovery_type = "Relation non-linéaire détectée"
+            else:
+                discovery_type = "Relation non-linéaire potentielle détectée"
+
+            if pattern.pattern_type == "u_curve":
+                warnings.append(
+                    f"{discovery_type} (courbe en U) entre "
+                    f"'{pattern.feature}' et '{pattern.target}' : "
+                    f"la régression linéaire peut être trompeuse sur cette paire. "
+                    f"Les effets ne sont pas proportionnels - une augmentation de "
+                    f"la feature peut avoir un impact différent selon le niveau de départ. "
+                    f"Signal validé après correction Benjamini-Hochberg ({p_validation})."
+                )
+            elif pattern.pattern_type == "optimum":
+                warnings.append(
+                    f"{discovery_type} (optimum) entre "
+                    f"'{pattern.feature}' et '{pattern.target}' : "
+                    f"la régression linéaire peut être trompeuse sur cette paire. "
+                    f"Il existe un niveau optimal de la feature au-delà duquel "
+                    f"l'effet s'inverse - la simulation linéaire ne capture pas "
+                    f"cette dynamique. Signal validé après correction "
+                    f"Benjamini-Hochberg ({p_validation})."
+                )
 
     return nonlinearity_patterns
 

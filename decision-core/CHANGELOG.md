@@ -8,8 +8,9 @@ All notable changes to decision-core will be documented in this file.
 
 - **Recalibrage des seuils de non-linéarité** :
   - Abaissement de `ETA_SQUARED_IMPROVEMENT_THRESHOLD` à `0.02` (au lieu de `0.05`) pour détecter les paliers de `Poids_Colis_Kg` -> `Frais_Port_Euros` (diff = 0.022) dans `logistique_livraisons_2025.csv`.
-  - Abaissement du seuil de gain de R² ajusté quadratique `QUADRATIC_IMPROVEMENT_THRESHOLD` à `0.005` (au lieu de `0.05`) et élargissement du seuil de p-value `QUADRATIC_P_VALUE_THRESHOLD` à `0.31` (au lieu de `0.05`) pour détecter la courbe en U de `Temperature_Exterieure_C` -> `Consommation_KWh` (imp = 0.0052, p = 0.3008) dans `energie_batiments_2025.csv` sur de petits échantillons bruités (N=15).
-  - Documentation de ces seuils empiriques dans les docstrings de `nonlinearity.py`.
+  - Passage de `QUADRATIC_IMPROVEMENT_THRESHOLD` à `0.04` et de `QUADRATIC_P_VALUE_THRESHOLD` à `0.10` pour renforcer la sélection des patterns quadratiques. Le signal faible de `Temperature_Exterieure_C` -> `Consommation_KWh` (imp = 0.0052, p = 0.3008) n'est plus retenu par ce réglage plus conservateur.
+  - Ajout d'une correction des p-values quadratiques par Benjamini-Hochberg au moment de construire les warnings.
+  - Documentation de ces seuils et de la correction multiple dans les docstrings de `nonlinearity.py`.
 
 ### Refactored
 

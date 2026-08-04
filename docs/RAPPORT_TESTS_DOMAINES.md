@@ -149,7 +149,7 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 * **Résultat obtenu** : Baseline = 3 586,67 kWh, Simulation = 3 173,95 kWh (-11,51%), $R^2 = 0,627$.
 * **Analyse & Critique Métier** :
   - ~~**Courbe en U (Climatisation)** : La consommation monte en hiver (Chauffage) et remonte en été (Climatisation). Le modèle linéaire rate le creux parabolique.~~
-* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2 - Seuils recalibrés)** : Le moteur détecte désormais la courbe en U (relation quadratique) entre `Temperature_Exterieure_C` et `Consommation_KWh` (amélioration du $R^2_{adj} \approx 0,0052$, $p$-value $\approx 0,3008$, capturés par les nouveaux seuils de $0,005$ et $0,31$) et avertit que la simulation linéaire peut être trompeuse sur cette paire.</span>
+* <span style="color: #2ea043;">**État Actuel (Août 2026 - Phase P1.2 - Seuils recalibrés)** : Le moteur utilise maintenant des seuils quadratiques plus stricts (gain de R² ajusté ≥ 0.04 et p-value brute ≤ 0.10) et applique une correction Benjamini-Hochberg sur les détecteurs quadratiques. Le signal faible de `Temperature_Exterieure_C` -> `Consommation_KWh` n'est plus retenu comme warning quadratique dans ce cadre plus conservateur.</span>
 
 ### Test 14 : Marketing Digital & SEO/Adwords
 * **Fichier de test** : `examples/marketing_digital_2025.csv`

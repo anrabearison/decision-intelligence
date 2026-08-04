@@ -16,12 +16,15 @@ Choix méthodologiques :
 - Quadratique seulement : capture les U et cloches, cas les plus courants
 - Step par quantiles : robuste aux distributions asymétriques, adapte le nombre
   de bins à la taille de l'échantillon
-- Significativité stricte du coefficient quadratique (p < 0.05) : évite les
-  faux positifs sur du bruit linéaire
+- Significativité marginale du coefficient quadratique (p ≤ 0.10) : compromis
+  standard exploratoire pour petit échantillon, avec un seuil ajusté plus
+  conservateur que l'ancien calibrage sur un seul exemple.
 - Significativité ANOVA du step pattern (p < 0.05) : protège contre le
-  gonflement artificiel de l'eta² sur de petits groupes par quantile
-- Comparaison eta² vs R² : seuil de 0.05 pour considérer qu'un modèle par
-  paliers est nettement meilleur qu'un modèle linéaire
+  gonflement artificiel de l'eta² sur de petits groupes par quantile.
+- Comparaison des R² ajustés : amélioration d'au moins 0.04 requise pour
+  qu'un modèle quadratique soit retenu.
+- Les paires de top corrélations sont corrigées pour comparaisons multiples
+  (Benjamini-Hochberg) au moment de construire les warnings.
 """
 import numpy as np
 import pandas as pd
@@ -31,16 +34,19 @@ from decision_core.models.nonlinearity import QuadraticPatternResult, StepPatter
 
 MIN_ROWS_FOR_NONLINEARITY = 10
 
-# Seuils empiriquement calibrés sur les cas d'exemples réels :
-# 1. QUADRATIC_IMPROVEMENT_THRESHOLD (0.005) : Permet de détecter le pattern quadratique (U-curve)
-#    de Temperature_Exterieure_C -> Consommation_KWh dans 'energie_batiments_2025.csv' (amélioration = 0.0052).
-# 2. QUADRATIC_P_VALUE_THRESHOLD (0.31) : Nécessaire pour capturer le pattern quadratique du climat
-#    sur de petits échantillons bruités (N=15, p-value réelle = 0.3008) sans générer de faux positifs
-#    sur des relations purement linéaires bruitées.
+# Seuils choisis pour un compromis puissance / faux positifs à petit échantillon :
+# 1. QUADRATIC_IMPROVEMENT_THRESHOLD (0.04) : amélioration minimale du R² ajusté
+#    requise pour qu'un modèle quadratique soit considérablement meilleur qu'un
+#    modèle linéaire. Ce seuil est volontairement plus strict que le cas unique
+#    de l'énergie, afin de limiter le sur-détection sur le corpus complet.
+# 2. QUADRATIC_P_VALUE_THRESHOLD (0.10) : seuil marginal reconnu en analyse
+#    exploratoire. Il permet de conserver un signal sur de petits échantillons
+#    tout en restant bien plus conservateur que l'ancien seuil calibré sur un
+#    seul exemple.
 # 3. ETA_SQUARED_IMPROVEMENT_THRESHOLD (0.02) : Permet de détecter les paliers tarifaires
 #    de Poids_Colis_Kg -> Frais_Port_Euros dans 'logistique_livraisons_2025.csv' (différence = 0.0218).
-QUADRATIC_IMPROVEMENT_THRESHOLD = 0.005
-QUADRATIC_P_VALUE_THRESHOLD = 0.31
+QUADRATIC_IMPROVEMENT_THRESHOLD = 0.04
+QUADRATIC_P_VALUE_THRESHOLD = 0.10
 ETA_SQUARED_IMPROVEMENT_THRESHOLD = 0.02
 
 
