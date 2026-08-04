@@ -15,6 +15,11 @@ from decision_core.stats.nonlinearity import (
     detect_quadratic_pattern,
     detect_step_pattern,
 )
+from decision_core.stats.distribution import (
+    detect_count_data_distribution,
+    detect_zero_inflation,
+    detect_heavy_tail,
+)
 from decision_core.models.nonlinearity import StepPatternResult
 
 
@@ -317,7 +322,66 @@ def _build_nonlinearity_warnings(
                     f"Benjamini-Hochberg ({p_validation})."
                 )
 
+    _build_distribution_warnings(df, numeric_cols, warnings)
     return nonlinearity_patterns
+
+
+def _build_distribution_warnings(
+    df: pd.DataFrame,
+    numeric_cols: list[str],
+    warnings: list[str],
+    max_warnings: int = 4,
+) -> None:
+    """Détecte les distributions non-gaussiennes et enrichit les warnings.
+
+    Args:
+        df: DataFrame pandas à analyser.
+        numeric_cols: Liste des colonnes numériques.
+        warnings: Liste des warnings à enrichir (modifiée en place).
+        max_warnings: Nombre maximum de warnings généraux hors simulation.
+    """
+    detected = []
+
+    for col in numeric_cols:
+        series = df[col]
+
+        count_result = detect_count_data_distribution(series)
+        if count_result is not None:
+            warnings.append(
+                f"Distribution de comptage détectée pour '{count_result.feature}' : "
+                f"valeurs discrètes et peu nombreuses ({count_result.unique_values} valeurs distinctes, "
+                f"moyenne = {count_result.mean:.2f}, variance = {count_result.variance:.2f}). "
+                f"Une régression linéaire normale peut sous-estimer ce type de données ; "
+                f"un modèle de comptage (Poisson, quasi-Poisson) est souvent plus adapté."
+            )
+            detected.append(col)
+
+        zero_result = detect_zero_inflation(series)
+        if zero_result is not None:
+            warnings.append(
+                f"Distribution zéro-inflated détectée pour '{zero_result.feature}' : "
+                f"{zero_result.zero_ratio:.0%} des observations sont nulles, ce qui crée une masse importante à zéro. "
+                f"La variance n'est pas bien capturée par un modèle gaussien standard ; "
+                f"une approche à deux phases (zero-inflated ou hurdle model) peut mieux décrire ces données."
+            )
+            detected.append(col)
+
+        heavy_result = detect_heavy_tail(series)
+        if heavy_result is not None:
+            warnings.append(
+                f"Distribution à queue lourde détectée pour '{heavy_result.feature}' : "
+                f"forte asymétrie (skew = {heavy_result.skewness:.2f}, kurtosis = {heavy_result.kurtosis:.2f}) et "
+                f"valeurs extrêmes influent fortement sur la moyenne. "
+                f"Un modèle normal standard peut sous-estimer le risque des très grandes valeurs."
+            )
+            detected.append(col)
+
+    if len(detected) > max_warnings:
+        warnings.append(
+            f"Plusieurs variables ({len(detected)}) présentent des distributions non-gaussiennes "
+            f"(comptage, zéro-inflation, queues lourdes). Ces colonnes méritent une attention particulière "
+            f"et potentiellement un modèle statistique adapté avant de faire des projections."
+        )
 
 
 def _build_asymmetry_warnings(

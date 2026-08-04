@@ -35,6 +35,11 @@ from decision_core.stats.categorical import (
     detect_significant_subgroups,
     generate_segmented_reports,
 )
+from decision_core.stats.distribution import (
+    detect_count_data_distribution,
+    detect_zero_inflation,
+    detect_heavy_tail,
+)
 
 __all__ = [
     # Profiling
@@ -63,4 +68,8 @@ __all__ = [
     "encode_categorical_features",
     "detect_significant_subgroups",
     "generate_segmented_reports",
+    # Distribution
+    "detect_count_data_distribution",
+    "detect_zero_inflation",
+    "detect_heavy_tail",
 ]

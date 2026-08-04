@@ -421,3 +421,20 @@ class TestAsymmetryWarnings:
         _build_asymmetry_warnings(df, list(df.columns), [], warnings)
         assert len(warnings) == 3
         assert all("Distribution asymétrique détectée" in w for w in warnings)
+
+
+class TestDistributionWarnings:
+    def test_detects_count_data_warning(self):
+        df = pd.DataFrame({"Anomalies_Comptees": [0, 0, 1, 2, 0, 3, 0, 1, 0, 2]})
+        report = generate_report(df)
+        assert any("Distribution de comptage détectée" in w for w in report["warnings"])
+
+    def test_detects_zero_inflated_warning(self):
+        df = pd.DataFrame({"Cout_Indemnisation_Euros": [0, 0, 0, 100, 0, 0, 200, 0, 0, 300]})
+        report = generate_report(df)
+        assert any("Distribution zéro-inflated détectée" in w for w in report["warnings"])
+
+    def test_detects_heavy_tail_warning(self):
+        df = pd.DataFrame({"Cout_Incident_Euros": [1, 2, 2, 3, 5, 10, 20, 100, 500, 2000]})
+        report = generate_report(df)
+        assert any("Distribution à queue lourde détectée" in w for w in report["warnings"])
