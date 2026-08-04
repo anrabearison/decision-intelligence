@@ -391,8 +391,9 @@ class TestAsymmetryWarnings:
         })
         warnings = []
         _build_asymmetry_warnings(df, ["Cost"], ["Severity"], warnings)
-        assert len(warnings) == 1
-        assert "Considérez une analyse segmentée par 'Severity'" in warnings[0]
+        assert len(warnings) == 2
+        assert any("Distribution asymétrique détectée pour 'Cost'" in w for w in warnings)
+        assert any("segmente fortement les données" in w for w in warnings)
 
     def test_handles_zero_std_gracefully(self):
         """Teste le cas où std = 0 (toutes les valeurs identiques)."""
@@ -447,9 +448,12 @@ class TestAsymmetryWarnings:
 
 class TestDistributionWarnings:
     def test_detects_count_data_warning(self):
-        df = pd.DataFrame({"Anomalies_Comptees": [0, 0, 1, 2, 0, 3, 0, 1, 0, 2]})
+        df = pd.DataFrame({
+            "Anomalies_Comptees": [1, 2, 1, 2, 3, 2, 1, 2, 3, 4, 5, 2, 1, 2, 3]
+        })
         report = generate_report(df)
         assert any("Distribution de comptage détectée" in w for w in report["warnings"])
+        assert not any("Distribution zéro-inflated détectée" in w for w in report["warnings"])
 
     def test_detects_zero_inflated_warning(self):
         df = pd.DataFrame({"Cout_Indemnisation_Euros": [0, 0, 0, 100, 0, 0, 200, 0, 0, 300]})
@@ -460,3 +464,33 @@ class TestDistributionWarnings:
         df = pd.DataFrame({"Cout_Incident_Euros": [1, 2, 2, 3, 5, 10, 20, 100, 500, 2000]})
         report = generate_report(df)
         assert any("Distribution à queue lourde détectée" in w for w in report["warnings"])
+
+    def test_combines_count_and_zero_inflated_warnings_into_one(self):
+        df = pd.DataFrame({
+            "Nombre_Sinistres": [0, 0, 1, 0, 2, 0, 3, 0, 0, 4, 0, 0, 1, 0, 2]
+        })
+        report = generate_report(df)
+        combined_warnings = [
+            w for w in report["warnings"]
+            if "Distribution de comptage avec forte proportion de zéros détectée" in w
+        ]
+        assert len(combined_warnings) == 1
+        assert not any(
+            "Distribution de comptage détectée" in w and "forte proportion de zéros" not in w
+            for w in report["warnings"]
+        )
+        assert not any(
+            "Distribution zéro-inflated détectée" in w and "forte proportion de zéros" not in w
+            for w in report["warnings"]
+        )
+
+    def test_count_zero_columns_are_excluded_from_asymmetry_warnings(self):
+        df = pd.DataFrame({
+            "Nombre_Sinistres": [0, 0, 1, 0, 2, 0, 3, 0, 0, 4, 0, 0, 1, 0, 2,
+                                   0, 1, 2, 0, 0, 1, 3, 0, 0, 2, 0, 0, 1, 0, 3],
+            "Revenu": [100] * 20 + [1000] * 10,
+        })
+        report = generate_report(df)
+        assert any("Distribution de comptage avec forte proportion de zéros détectée" in w for w in report["warnings"])
+        assert not any("Distribution asymétrique détectée pour 'Nombre_Sinistres'" in w for w in report["warnings"])
+        assert any("Distribution asymétrique détectée" in w for w in report["warnings"])

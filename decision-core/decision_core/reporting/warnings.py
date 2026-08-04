@@ -322,31 +322,74 @@ def _build_nonlinearity_warnings(
                     f"Benjamini-Hochberg ({p_validation})."
                 )
 
-    _build_distribution_warnings(df, numeric_cols, warnings)
-    return nonlinearity_patterns
+    covered_columns = _build_distribution_warnings(df, numeric_cols, warnings)
+    return nonlinearity_patterns, covered_columns
 
 
 def _build_distribution_warnings(
     df: pd.DataFrame,
     numeric_cols: list[str],
     warnings: list[str],
-    max_warnings: int = 4,
-) -> None:
+    summary_threshold: int = 4,
+) -> set[str]:
     """Détecte les distributions non-gaussiennes et enrichit les warnings.
 
     Args:
         df: DataFrame pandas à analyser.
         numeric_cols: Liste des colonnes numériques.
         warnings: Liste des warnings à enrichir (modifiée en place).
-        max_warnings: Nombre maximum de warnings généraux hors simulation.
+        summary_threshold: Seuil de nombre de colonnes non-gaussiennes au-delà duquel
+            un warning de synthèse est émis à la place des warnings individuels.
+
+    Returns:
+        Ensemble des colonnes couvertes par les warnings de distribution (comptage ou zéro-inflated).
     """
-    detected = []
+    detected_columns = []
+    column_details = []
 
     for col in numeric_cols:
         series = df[col]
 
         count_result = detect_count_data_distribution(series)
-        if count_result is not None:
+        zero_result = detect_zero_inflation(series)
+        heavy_result = detect_heavy_tail(series)
+
+        if count_result is None and zero_result is None and heavy_result is None:
+            continue
+
+        column_details.append({
+            "column": col,
+            "count": count_result,
+            "zero": zero_result,
+            "heavy": heavy_result,
+        })
+
+        if count_result is not None or zero_result is not None:
+            detected_columns.append(col)
+
+    if len(column_details) > summary_threshold:
+        warnings.append(
+            f"Plusieurs variables ({len(column_details)}) présentent des distributions non-gaussiennes "
+            f"(comptage, zéro-inflation, queues lourdes). Ces colonnes méritent une attention particulière "
+            f"et potentiellement un modèle statistique adapté avant de faire des projections."
+        )
+        return set(detected_columns)
+
+    for details in column_details:
+        col = details["column"]
+        count_result = details["count"]
+        zero_result = details["zero"]
+        heavy_result = details["heavy"]
+
+        if count_result is not None and zero_result is not None:
+            warnings.append(
+                f"Distribution de comptage avec forte proportion de zéros détectée pour '{count_result.feature}' : "
+                f"valeurs discrètes et peu nombreuses ({count_result.unique_values} valeurs distinctes), "
+                f"{zero_result.zero_ratio:.0%} des observations sont nulles. "
+                f"Une régression gaussienne standard peut sous-estimer ces données ; "
+                f"un modèle de comptage zero-inflated ou hurdle est souvent plus adapté."
+            )
+        elif count_result is not None:
             warnings.append(
                 f"Distribution de comptage détectée pour '{count_result.feature}' : "
                 f"valeurs discrètes et peu nombreuses ({count_result.unique_values} valeurs distinctes, "
@@ -354,19 +397,14 @@ def _build_distribution_warnings(
                 f"Une régression linéaire normale peut sous-estimer ce type de données ; "
                 f"un modèle de comptage (Poisson, quasi-Poisson) est souvent plus adapté."
             )
-            detected.append(col)
-
-        zero_result = detect_zero_inflation(series)
-        if zero_result is not None:
+        elif zero_result is not None:
             warnings.append(
                 f"Distribution zéro-inflated détectée pour '{zero_result.feature}' : "
                 f"{zero_result.zero_ratio:.0%} des observations sont nulles, ce qui crée une masse importante à zéro. "
                 f"La variance n'est pas bien capturée par un modèle gaussien standard ; "
                 f"une approche à deux phases (zero-inflated ou hurdle model) peut mieux décrire ces données."
             )
-            detected.append(col)
 
-        heavy_result = detect_heavy_tail(series)
         if heavy_result is not None:
             warnings.append(
                 f"Distribution à queue lourde détectée pour '{heavy_result.feature}' : "
@@ -374,14 +412,8 @@ def _build_distribution_warnings(
                 f"valeurs extrêmes influent fortement sur la moyenne. "
                 f"Un modèle normal standard peut sous-estimer le risque des très grandes valeurs."
             )
-            detected.append(col)
 
-    if len(detected) > max_warnings:
-        warnings.append(
-            f"Plusieurs variables ({len(detected)}) présentent des distributions non-gaussiennes "
-            f"(comptage, zéro-inflation, queues lourdes). Ces colonnes méritent une attention particulière "
-            f"et potentiellement un modèle statistique adapté avant de faire des projections."
-        )
+    return set(detected_columns)
 
 
 def _build_asymmetry_warnings(
@@ -391,6 +423,7 @@ def _build_asymmetry_warnings(
     warnings: list[str],
     simulation_config=None,
     max_warnings: int = 3,
+    excluded_columns: list[str] | None = None,
 ) -> None:
     """Détecte les distributions asymétriques et avertit sans changer la simulation.
 
@@ -407,15 +440,18 @@ def _build_asymmetry_warnings(
         warnings: Liste des warnings à enrichir (modifiée en place).
         simulation_config: Configuration de simulation optionnelle.
         max_warnings: Nombre maximum de warnings hors simulation.
+        excluded_columns: Colonnes déjà couvertes par les warnings de distribution.
     """
+    excluded_columns = set(excluded_columns or [])
+
     if simulation_config is not None:
         relevant_cols = [
             col for col in [simulation_config.target, simulation_config.feature]
-            if col in numeric_cols
+            if col in numeric_cols and col not in excluded_columns
         ]
         limit = len(relevant_cols)
     else:
-        relevant_cols = list(numeric_cols)
+        relevant_cols = [col for col in numeric_cols if col not in excluded_columns]
         limit = max_warnings
 
     candidates = []
@@ -451,8 +487,17 @@ def _build_asymmetry_warnings(
             f"{interpretation}"
         )
 
-        if significant_subgroups:
-            subgroup = significant_subgroups[0]
-            warning += f" Considérez une analyse segmentée par '{subgroup}'."
+        warnings.append(warning)
 
+    if significant_subgroups and candidates:
+        first_subgroup = significant_subgroups[0]
+        if isinstance(first_subgroup, dict):
+            subgroup_column = first_subgroup.get("column", str(first_subgroup))
+        else:
+            subgroup_column = str(first_subgroup)
+        warning = (
+            f"Pour toutes ces colonnes asymétriques, considérez une analyse segmentée "
+            f"par '{subgroup_column}' selon l'analyse des sous-groupes, qui montre qu'elle "
+            f"segmente fortement les données."
+        )
         warnings.append(warning)
