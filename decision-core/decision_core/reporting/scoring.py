@@ -9,6 +9,25 @@ SMALL_SAMPLE_THRESHOLD = 30
 LOW_R_SQUARED_THRESHOLD = 0.3
 
 
+def _warnings_penalty(n_warnings: int) -> int:
+    """Calibre la pénalité de warnings en paliers non linéaires.
+
+    Le calibrage vise à refléter correctement les 18 exemples du dossier
+    `examples/`, sans rendre chaque warning trop punitif. Les warnings sont
+    informatifs, pas tous critiques : un dataset avec 16 warnings doit être
+    nettement pénalisé, mais pas tomber automatiquement à 0.
+    """
+    if n_warnings <= 3:
+        return 0
+    if n_warnings <= 5:
+        return 10
+    if n_warnings <= 8:
+        return 25
+    if n_warnings <= 12:
+        return 40
+    return 55
+
+
 def _compute_exploitability_score(
     n_rows: int,
     n_warnings: int,
@@ -40,8 +59,15 @@ def _compute_exploitability_score(
     elif n_rows < SMALL_SAMPLE_THRESHOLD:
         score -= 25
 
-    # Pénalité warnings (chaque warning = -10, plafonné à -30)
-    score -= min(n_warnings * 10, 30)
+    # Pénalité warnings calibrée sur les 18 CSV d'examples.
+    # Observations empiriques :
+    # - 3 warnings sur un dataset de 15 lignes (tourisme) doit rester exploitable
+    #   plutôt que tomber au même niveau que un dataset très bruyant.
+    # - 4-5 warnings correspondent à des limites modérées, 7-8 à des limites fortes,
+    #   10-12 à une qualité nettement dégradée et >12 à une situation critique.
+    # Utiliser des paliers plutôt qu'une pénalité linéaire évite de faire chuter
+    # un dataset à 0 alors que les warnings restent informatifs.
+    score -= _warnings_penalty(n_warnings)
 
     # Pénalité anomalies détectées
     score -= n_anomaly_cols * 5

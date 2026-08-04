@@ -228,7 +228,26 @@ def generate_report(
     # Détection des sous-groupes significatifs (seulement si des colonnes numériques existent)
     significant_subgroups = []
     if numeric_cols:
-        significant_subgroups = detect_significant_subgroups(df, numeric_cols[0])
+        targets_to_scan = []
+        if typed_simulation is not None and typed_simulation.target in numeric_cols:
+            targets_to_scan = [typed_simulation.target]
+        else:
+            targets_to_scan = numeric_cols
+
+        subgroup_map: dict[str, dict] = {}
+        for target in targets_to_scan:
+            for subgroup in detect_significant_subgroups(df, target):
+                column = subgroup["column"]
+                existing = subgroup_map.get(column)
+                if existing is None or subgroup["eta_squared"] > existing["eta_squared"]:
+                    subgroup_map[column] = subgroup
+
+        significant_subgroups = sorted(
+            subgroup_map.values(),
+            key=lambda s: s["eta_squared"],
+            reverse=True,
+        )[:5]
+
         for subgroup in significant_subgroups:
             warnings.append(
                 f"Sous-groupe significatif détecté : '{subgroup['column']}' explique "

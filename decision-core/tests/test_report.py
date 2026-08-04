@@ -36,6 +36,28 @@ class TestGenerateReportStructure:
         assert report["dataset_summary"]["n_rows"] == 10
         assert report["dataset_summary"]["n_columns"] == 7
 
+    def test_significant_subgroups_do_not_depend_on_numeric_column_order(self):
+        df = pd.DataFrame({
+            "target": [10, 10, 20, 20, 30, 30],
+            "other": [1, 2, 1, 2, 1, 2],
+            "cat": ["A", "A", "B", "B", "C", "C"],
+        })
+        reordered = df[["other", "target", "cat"]]
+
+        report_original = generate_report(df)
+        report_reordered = generate_report(reordered)
+
+        subgroup_warnings_original = [
+            w for w in report_original["warnings"]
+            if "Sous-groupe significatif détecté" in w
+        ]
+        subgroup_warnings_reordered = [
+            w for w in report_reordered["warnings"]
+            if "Sous-groupe significatif détecté" in w
+        ]
+
+        assert subgroup_warnings_original == subgroup_warnings_reordered
+
     def test_profiling_excludes_identifier_columns(self):
         # Cohérence avec correlation_matrix (déjà corrigé) : une colonne
         # identifiant (numéro de lot séquentiel) n'a pas de moyenne/écart-type

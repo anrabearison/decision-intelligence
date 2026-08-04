@@ -4,6 +4,8 @@ Couvre R2 (baseline configurable), R4 (bornes simulation),
 R7 (seuil IQR configurable), R8 (warning saisonnalité),
 R9 (score d'exploitabilité).
 """
+import os
+from pathlib import Path
 import pandas as pd
 import pytest
 
@@ -405,3 +407,13 @@ class TestScoreExploitabilite:
         good = _compute_exploitability_score(50, 1, 0, 0.9)
         bad = _compute_exploitability_score(50, 1, 0, 0.02)
         assert bad.score < good.score
+
+    def test_marketing_score_is_lower_than_tourism_on_real_examples(self):
+        examples_dir = Path(__file__).resolve().parents[1] / "examples"
+        marketing = generate_report(
+            pd.read_csv(examples_dir / "marketing_digital_2025.csv", sep=";", decimal=",")
+        )["exploitability"]["score"]
+        tourisme = generate_report(
+            pd.read_csv(examples_dir / "tourisme_frequentation_2025.csv", sep=";", decimal=",")
+        )["exploitability"]["score"]
+        assert marketing < tourisme
