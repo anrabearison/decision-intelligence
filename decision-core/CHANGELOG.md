@@ -10,6 +10,9 @@ All notable changes to decision-core will be documented in this file.
   - Abaissement de `ETA_SQUARED_IMPROVEMENT_THRESHOLD` à `0.02` (au lieu de `0.05`) pour détecter les paliers de `Poids_Colis_Kg` -> `Frais_Port_Euros` (diff = 0.022) dans `logistique_livraisons_2025.csv`.
   - Passage de `QUADRATIC_IMPROVEMENT_THRESHOLD` à `0.04` et de `QUADRATIC_P_VALUE_THRESHOLD` à `0.10` pour renforcer la sélection des patterns quadratiques. Le signal faible de `Temperature_Exterieure_C` -> `Consommation_KWh` (imp = 0.0052, p = 0.3008) n'est plus retenu par ce réglage plus conservateur.
   - Ajout d'une correction des p-values quadratiques par Benjamini-Hochberg au moment de construire les warnings.
+  - Élargissement du scan P1.2 à l'ensemble des paires numériques calculées, avec plafond `MAX_NONLINEARITY_PAIRS`, au lieu de dépendre uniquement des 5 meilleures corrélations linéaires.
+  - Inclusion systématique de la paire de simulation `feature -> target` dans les candidats de non-linéarité lorsqu'elle est numérique.
+  - Limitation de l'affichage à `MAX_NONLINEARITY_WARNINGS = 3` warnings P1.2, triés par gain explicatif (`R² quadratique - R² linéaire` ou `eta² par bins - R² linéaire`), tout en conservant tous les patterns détectés pour les garde-fous de simulation.
   - Documentation de ces seuils et de la correction multiple dans les docstrings de `nonlinearity.py`.
 
 ### Refactored
@@ -76,7 +79,7 @@ All notable changes to decision-core will be documented in this file.
   - Export dans `decision_core.models.__init__`
 - **Intégration dans le reporting**
   - Ajout de `_build_nonlinearity_warnings()` dans `reporting/warnings.py`
-  - Détection limitée aux paires de top_correlations pour éviter l'explosion combinatoire
+  - Détection sur les paires numériques candidates, plafonnée sur les datasets larges pour éviter l'explosion combinatoire
   - Avertissements pédagogiques en français pour chaque type de relation détectée
   - Avertissement spécifique dans `_build_simulation_warnings()` si la feature de simulation est non-linéaire
 - **Garde-fous pour petit échantillon**

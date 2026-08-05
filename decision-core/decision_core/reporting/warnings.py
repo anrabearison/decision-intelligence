@@ -27,6 +27,8 @@ from decision_core.models.nonlinearity import StepPatternResult
 SMALL_SAMPLE_THRESHOLD = MIN_RELIABLE_SAMPLE_SIZE
 LOW_R_SQUARED_THRESHOLD = 0.3
 ASYMMETRY_THRESHOLD = 0.4  # Calibré sur 18 domaines (21% des colonnes au-dessus)
+MAX_NONLINEARITY_PAIRS = 300
+MAX_NONLINEARITY_WARNINGS = 3
 
 # R8 — Détection de colonnes temporelles pour le warning de saisonnalité.
 # Mots-clés cherchés dans les noms de colonnes (insensible à la casse).
@@ -250,17 +252,30 @@ def _build_nonlinearity_warnings(
     top_correlations: list,
     warnings: list[str],
     significant_subgroups: list[dict] | None = None,
-) -> list:
+    candidate_correlations: list[dict] | None = None,
+    simulation_config=None,
+    max_pairs: int = MAX_NONLINEARITY_PAIRS,
+    max_warnings: int = MAX_NONLINEARITY_WARNINGS,
+) -> tuple[list, set[str]]:
     """Détecte les patterns non-linéaires et ajoute des warnings pédagogiques.
 
     Args:
         df: DataFrame pandas à analyser.
         numeric_cols: Liste des colonnes numériques.
-        top_correlations: Liste des corrélations principales.
+        top_correlations: Liste des corrélations principales, conservée comme
+            repli de compatibilité.
         warnings: Liste des warnings à enrichir (modifiée en place).
+        candidate_correlations: Liste élargie de paires numériques à tester
+            pour non-linéarité. Si absente, seules les top correlations sont
+            utilisées (ancien comportement).
+        simulation_config: Configuration de simulation optionnelle. Sa paire
+            feature -> target est toujours ajoutée aux candidats si numérique.
+        max_pairs: Plafond de paires non-linéaires testées.
+        max_warnings: Nombre maximal de warnings P1.2 affichés dans le rapport.
 
     Returns:
-        Liste des patterns non-linéaires détectés (pour réutilisation dans _build_simulation_warnings).
+        Tuple contenant les patterns non-linéaires détectés et les colonnes
+        déjà couvertes par ces warnings.
     """
     nonlinearity_patterns = []
     significant_subgroups = significant_subgroups or []
@@ -273,13 +288,42 @@ def _build_nonlinearity_warnings(
         confounders = detect_confounders(df, target, feature)
         return any(subgroup_eta_squared.get(confounder, 0) > 0.5 for confounder in confounders)
 
-    # Limiter l'analyse aux paires de top_correlations pour éviter l'explosion combinatoire
+    def _candidate_pairs() -> list[tuple[str, str]]:
+        source = candidate_correlations if candidate_correlations is not None else top_correlations
+        pairs: list[tuple[str, str]] = []
+        seen: set[tuple[str, str]] = set()
+
+        def add_pair(feature: str, target: str) -> None:
+            if feature == target:
+                return
+            if feature not in numeric_cols or target not in numeric_cols:
+                return
+            key = (feature, target)
+            if key in seen:
+                return
+            seen.add(key)
+            pairs.append(key)
+
+        if simulation_config is not None:
+            add_pair(simulation_config.feature, simulation_config.target)
+
+        for corr in source:
+            add_pair(corr["column_a"], corr["column_b"])
+            if len(pairs) >= max_pairs:
+                break
+
+        return pairs
+
+    def _explanatory_gain(pattern) -> float:
+        if isinstance(pattern, StepPatternResult):
+            return pattern.eta_squared_binned - pattern.r2_linear
+        return pattern.r2_quadratic_adj - pattern.r2_linear_adj
+
+    # Scanner les paires candidates élargies : toutes les corrélations calculées
+    # sur les jeux raisonnables, plafonnées sur les datasets larges.
     quadratic_results = []
     step_results = []
-    for corr in top_correlations:
-        feature = corr["column_a"]
-        target = corr["column_b"]
-
+    for feature, target in _candidate_pairs():
         if _has_strong_confounder(feature, target):
             continue
 
@@ -292,6 +336,7 @@ def _build_nonlinearity_warnings(
         if step_result:
             step_results.append(step_result)
 
+    display_candidates = []
     quadratic_validated_pairs = set()
     if quadratic_results:
         raw_p_values = np.array([pattern.p_value for pattern in quadratic_results])
@@ -303,47 +348,62 @@ def _build_nonlinearity_warnings(
 
             quadratic_validated_pairs.add((pattern.feature, pattern.target))
             nonlinearity_patterns.append(pattern)
-            p_validation = (
-                f"p ajustée = {adjusted_p:.2f}"
-                f" (p brute = {pattern.p_value:.2f})"
-            )
-            if pattern.p_value <= 0.05:
-                discovery_type = "Relation non-linéaire détectée"
-            else:
-                discovery_type = "Relation non-linéaire potentielle détectée"
-
-            if pattern.pattern_type == "u_curve":
-                warnings.append(
-                    f"{discovery_type} (courbe en U) entre "
-                    f"'{pattern.feature}' et '{pattern.target}' : "
-                    f"la régression linéaire peut être trompeuse sur cette paire. "
-                    f"Les effets ne sont pas proportionnels - une augmentation de "
-                    f"la feature peut avoir un impact différent selon le niveau de départ. "
-                    f"Signal validé après correction Benjamini-Hochberg ({p_validation})."
-                )
-            elif pattern.pattern_type == "optimum":
-                warnings.append(
-                    f"{discovery_type} (optimum) entre "
-                    f"'{pattern.feature}' et '{pattern.target}' : "
-                    f"la régression linéaire peut être trompeuse sur cette paire. "
-                    f"Il existe un niveau optimal de la feature au-delà duquel "
-                    f"l'effet s'inverse - la simulation linéaire ne capture pas "
-                    f"cette dynamique. Signal validé après correction "
-                    f"Benjamini-Hochberg ({p_validation})."
-                )
+            display_candidates.append((pattern, adjusted_p))
 
     for step_result in step_results:
         if (step_result.feature, step_result.target) in quadratic_validated_pairs:
             continue
 
         nonlinearity_patterns.append(step_result)
-        warnings.append(
-            f"Relation non-linéaire détectée (paliers) entre "
-            f"'{step_result.feature}' et '{step_result.target}' : "
-            f"la régression linéaire peut être trompeuse sur cette paire. "
-            f"La relation fonctionne par tranches de tarification ou seuils, "
-            f"pas par une droite continue."
+        display_candidates.append((step_result, None))
+
+    display_candidates.sort(
+        key=lambda item: (
+            _explanatory_gain(item[0]),
+            -item[0].p_value,
+        ),
+        reverse=True,
+    )
+
+    for pattern, adjusted_p in display_candidates[:max_warnings]:
+        if isinstance(pattern, StepPatternResult):
+            warnings.append(
+                f"Relation non-linéaire détectée (paliers) entre "
+                f"'{pattern.feature}' et '{pattern.target}' : "
+                f"la régression linéaire peut être trompeuse sur cette paire. "
+                f"La relation fonctionne par tranches de tarification ou seuils, "
+                f"pas par une droite continue."
+            )
+            continue
+
+        p_validation = (
+            f"p ajustée = {adjusted_p:.2f}"
+            f" (p brute = {pattern.p_value:.2f})"
         )
+        if pattern.p_value <= 0.05:
+            discovery_type = "Relation non-linéaire détectée"
+        else:
+            discovery_type = "Relation non-linéaire potentielle détectée"
+
+        if pattern.pattern_type == "u_curve":
+            warnings.append(
+                f"{discovery_type} (courbe en U) entre "
+                f"'{pattern.feature}' et '{pattern.target}' : "
+                f"la régression linéaire peut être trompeuse sur cette paire. "
+                f"Les effets ne sont pas proportionnels - une augmentation de "
+                f"la feature peut avoir un impact différent selon le niveau de départ. "
+                f"Signal validé après correction Benjamini-Hochberg ({p_validation})."
+            )
+        elif pattern.pattern_type == "optimum":
+            warnings.append(
+                f"{discovery_type} (optimum) entre "
+                f"'{pattern.feature}' et '{pattern.target}' : "
+                f"la régression linéaire peut être trompeuse sur cette paire. "
+                f"Il existe un niveau optimal de la feature au-delà duquel "
+                f"l'effet s'inverse - la simulation linéaire ne capture pas "
+                f"cette dynamique. Signal validé après correction "
+                f"Benjamini-Hochberg ({p_validation})."
+            )
 
     covered_columns = _build_distribution_warnings(df, numeric_cols, warnings)
     return nonlinearity_patterns, covered_columns

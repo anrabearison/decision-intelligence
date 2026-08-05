@@ -231,6 +231,69 @@ class TestIntegrationWithGenerateReport:
         assert len(step_warnings) == 0
         assert len(quadratic_warnings) == 1
 
+    def test_generate_report_scans_nonlinearity_beyond_top_linear_correlations(self):
+        from decision_core import generate_report
+
+        rng = np.random.default_rng(42)
+        n = 60
+        x = np.linspace(-10, 10, n)
+        # Relation en cloche très forte mais corrélation linéaire proche de zéro.
+        y = 100 - 0.8 * x**2 + rng.normal(0, 0.5, n)
+
+        base = np.linspace(0, 100, n)
+        df = pd.DataFrame({
+            "Redondance_A": base,
+            "Redondance_B": base * 1.01 + rng.normal(0, 0.01, n),
+            "Redondance_C": base * 0.99 + rng.normal(0, 0.01, n),
+            "Redondance_D": base + rng.normal(0, 0.01, n),
+            "Redondance_E": base * 1.02 + rng.normal(0, 0.01, n),
+            "Effort": x,
+            "Performance": y,
+        })
+
+        report = generate_report(df)
+        warnings = report.warnings
+
+        assert any(
+            "non-linéaire" in w.lower()
+            and "Effort" in w
+            and "Performance" in w
+            for w in warnings
+        )
+
+    def test_nonlinearity_warnings_are_limited_to_highest_explanatory_gains(self):
+        rng = np.random.default_rng(42)
+        n = 80
+        data = {}
+        candidates = []
+
+        for idx, strength in enumerate([1.0, 0.8, 0.6, 0.4], start=1):
+            feature = f"feature_{idx}"
+            target = f"target_{idx}"
+            x = np.linspace(-10, 10, n)
+            y = 100 - strength * x**2 + rng.normal(0, 0.2, n)
+            data[feature] = x
+            data[target] = y
+            candidates.append({"column_a": feature, "column_b": target, "value": 0.0})
+
+        df = pd.DataFrame(data)
+        warnings = []
+
+        patterns, _ = _build_nonlinearity_warnings(
+            df,
+            list(df.columns),
+            [],
+            warnings,
+            candidate_correlations=candidates,
+            max_warnings=3,
+        )
+
+        nonlinearity_warnings = [w for w in warnings if "non-linéaire" in w.lower()]
+        assert len(patterns) == 4
+        assert len(nonlinearity_warnings) == 3
+        assert any("feature_1" in w and "target_1" in w for w in nonlinearity_warnings)
+        assert not any("feature_4" in w and "target_4" in w for w in nonlinearity_warnings)
+
 
 class TestRealWorldExamples:
     """Tests d'intégration sur les véritables jeux de données d'exemples."""

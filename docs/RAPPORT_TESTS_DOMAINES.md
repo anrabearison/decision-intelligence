@@ -9,13 +9,13 @@
 
 ## 1. Présentation et Objectifs
 
-Ce document présente l'évaluation expérimentale menée sur le moteur `decision-core` à travers **15 jeux de données réels et synthétiques** couvrant des secteurs d'activité variés. 
+Ce document présente l'évaluation expérimentale menée sur le moteur `decision-core` à travers **18 jeux de données réels et synthétiques** couvrant des secteurs d'activité variés. 
 
 L'objectif de cette campagne d'expérimentation est de confronter les algorithmes de `decision-core` (importer locale-aware, détection de type, détection de colonnes dérivées, profilage, corrélations corrigées Benjamini-Hochberg, détection d'anomalies IQR, points influents de Cook, et régression/simulation) à la réalité métier de chaque secteur.
 
 ---
 
-## 2. Inventaire des 15 Fichiers de Test
+## 2. Inventaire des 18 Fichiers de Test
 
 Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision-core/examples/` et peuvent être ré-exécutés avec le script d'analyse :
 
@@ -170,7 +170,7 @@ Tous les fichiers CSV ci-dessous sont enregistrés dans le répertoire `decision
 
 ---
 
-## 4. Tableau de Synthèse Finale des 15 Domaines
+## 4. Tableau de Synthèse Finale des 18 Domaines
 
 | N° | Domaine | Fichier CSV | Verdict | Limite Métier Majeure Découverte |
 |---|---|---|---|---|
@@ -297,13 +297,15 @@ Le warning suggère automatiquement le sous-groupe structurant déjà détecté 
 
 ---
 
-### Faille #4 — Non-linéarité ignorée (courbe en U / paliers / optimum) *(3 tests sur 18)*
+### Faille #4 — Non-linéarité ignorée (courbe en U / paliers / optimum) *(4 tests sur 18)*
 
 Le moteur applique systématiquement une droite linéaire, aveugle à toute relation en courbe, seuil ou optimum.
+La détection P1.2 ne dépend plus uniquement des 5 meilleures corrélations linéaires : elle scanne désormais les paires numériques candidates, avec un plafond de sécurité, afin de couvrir les relations fortement non-linéaires dont la corrélation linéaire est faible. Pour éviter de noyer l'utilisateur, le rapport affiche seulement les 3 alertes P1.2 au plus fort gain explicatif, tout en conservant les autres patterns détectés pour les garde-fous de simulation.
 
 | Test | Type de non-linéarité réelle |
 |---|---|
 | #5 Logistique | Tarification par paliers de poids (escaliers, pas une droite) |
+| #7 Éducation | Rendement décroissant : au-delà d'un certain volume, plus de révision n'améliore plus proportionnellement la note |
 | #13 Énergie | Courbe en U : Chauffage (hiver) + Climatisation (été), creux au printemps |
 | #18 Agriculture | Optimum gaussien de pluviométrie (300-400 mm) : trop sec ET trop humide = mauvais rendement |
 
@@ -367,6 +369,8 @@ Le moteur de régression suppose implicitement une distribution gaussienne (loi 
 *   **[Août 2026] Phase P1.2 - Non-Linéarité (Paliers & Optimums)** :
     *   Implémentation de la détection des relations par paliers (step functions, ANOVA par tranches).
     *   Implémentation de la détection des courbes paraboliques et optima locaux (régression polynomiale degré 2).
+    *   Élargissement du scan aux paires numériques candidates au-delà du top des corrélations linéaires, avec inclusion prioritaire de la paire de simulation et plafond anti-explosion combinatoire.
+    *   Limitation de l'affichage aux 3 meilleurs warnings P1.2 par gain explicatif pour réduire le bruit dans les rapports riches en colonnes.
     *   Avertissements générés lorsque le modèle linéaire passe à côté d'un rendement décroissant ou d'une tarification par tranches.
 *   **[Août 2026] Phase F3 - Détection d'Asymétrie & Baseline Non-Représentative** :
     *   Implémentation de `_build_asymmetry_warnings` : détection des distributions asymétriques via le ratio `|mean - median| / std > 0.4`.
