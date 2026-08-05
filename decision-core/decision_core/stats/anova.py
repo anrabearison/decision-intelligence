@@ -67,6 +67,7 @@ def compute_eta_squared_with_significance(
     if np.any(group_sizes < min_group_size):
         ssb = np.sum(group_sizes * (grouped.mean() - overall_mean) ** 2)
         eta_squared = float(ssb / sst) if sst > 0 else 0.0
+        eta_squared = max(0.0, min(eta_squared, 1.0))
         return EtaSquaredResult(
             eta_squared=eta_squared,
             p_value=1.0,
@@ -80,6 +81,7 @@ def compute_eta_squared_with_significance(
     ssw = np.sum(grouped.apply(lambda x: np.sum((x - np.mean(x)) ** 2)).values)
 
     eta_squared = float(ssb / sst) if sst > 0 else 0.0
+    eta_squared = max(0.0, min(eta_squared, 1.0))
 
     df_between = n_groups - 1
     df_within = n - n_groups
