@@ -1,9 +1,12 @@
 """
 Tests pour la détection de non-linéarité (P1.2).
 """
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
+from decision_core.reporting.warnings import _build_nonlinearity_warnings
 from decision_core.stats.nonlinearity import (
     detect_quadratic_pattern,
     detect_step_pattern,
@@ -168,6 +171,65 @@ class TestIntegrationWithGenerateReport:
         nonlinearity_warnings = [w for w in warnings if "non-linéaire" in w.lower()]
         assert len(nonlinearity_warnings) > 0
         assert any("p ajustée" in w.lower() for w in nonlinearity_warnings)
+
+    def test_real_world_ventes_magasin_satisfaction_client_pairs_do_not_duplicate_nonlinearity_warnings(self):
+        from decision_core.importer import import_file
+
+        examples_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "examples")
+        df = import_file(os.path.join(examples_dir, "ventes_magasin_2025.csv"))
+
+        warnings = []
+        top_correlations = [
+            {"column_a": "Satisfaction_Client", "column_b": "Chiffre_Affaires", "value": 1.0},
+            {"column_a": "Satisfaction_Client", "column_b": "Quantite_Vendue", "value": 1.0},
+        ]
+        _build_nonlinearity_warnings(df, ["Satisfaction_Client", "Chiffre_Affaires", "Quantite_Vendue"], top_correlations, warnings)
+
+        ca_warnings = [w for w in warnings if "Chiffre_Affaires" in w and "Satisfaction_Client" in w]
+        q_warnings = [w for w in warnings if "Quantite_Vendue" in w and "Satisfaction_Client" in w]
+
+        assert len(ca_warnings) == 1
+        assert len(q_warnings) == 1
+        assert all("paliers" not in w for w in ca_warnings)
+        assert all("paliers" not in w for w in q_warnings)
+
+    def test_generate_report_emits_step_warning_when_step_pattern_only(self):
+        from decision_core import generate_report
+
+        # Use a deterministic step-only dataset that is recognized by the detector
+        x = np.linspace(0, 20, 60)
+        levels = [49.94235033, 7.47241523, 43.40630287, 8.12464673]
+        cuts = [7, 32, 43]
+        y = np.empty_like(x)
+        prev = 0
+        for level, cut in zip(levels, cuts + [len(x)]):
+            y[prev:cut] = level
+            prev = cut
+        rng = np.random.RandomState(0)
+        y = y + rng.randn(60) * 0.4
+        df = pd.DataFrame({"feature": x, "target": y})
+
+        report = generate_report(df)
+        step_warnings = [w for w in report.warnings if "paliers" in w.lower()]
+        quadratic_warnings = [w for w in report.warnings if "optimum" in w.lower() or "courbe en u" in w.lower()]
+
+        assert len(step_warnings) >= 1
+        assert len(quadratic_warnings) == 0
+
+    def test_generate_report_prefers_quadratic_over_step_when_both_signals_exist(self):
+        from decision_core import generate_report
+
+        np.random.seed(42)
+        x = np.linspace(0, 20, 80)
+        y = 20 - 0.5 * (x - 10) ** 2 + np.random.randn(80) * 0.2
+        df = pd.DataFrame({"feature": x, "target": y})
+
+        report = generate_report(df)
+        step_warnings = [w for w in report.warnings if "paliers" in w]
+        quadratic_warnings = [w for w in report.warnings if "optimum" in w or "courbe en U" in w]
+
+        assert len(step_warnings) == 0
+        assert len(quadratic_warnings) == 1
 
 
 class TestRealWorldExamples:

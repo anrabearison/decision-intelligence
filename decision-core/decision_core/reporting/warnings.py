@@ -264,6 +264,7 @@ def _build_nonlinearity_warnings(
 
     # Limiter l'analyse aux paires de top_correlations pour éviter l'explosion combinatoire
     quadratic_results = []
+    step_results = []
     for corr in top_correlations:
         feature = corr["column_a"]
         target = corr["column_b"]
@@ -275,15 +276,9 @@ def _build_nonlinearity_warnings(
         # Détection de pattern par paliers
         step_result = detect_step_pattern(df, target, feature)
         if step_result:
-            nonlinearity_patterns.append(step_result)
-            warnings.append(
-                f"Relation non-linéaire détectée (paliers) entre "
-                f"'{step_result.feature}' et '{step_result.target}' : "
-                f"la régression linéaire peut être trompeuse sur cette paire. "
-                f"La relation fonctionne par tranches de tarification ou seuils, "
-                f"pas par une droite continue."
-            )
+            step_results.append(step_result)
 
+    quadratic_validated_pairs = set()
     if quadratic_results:
         raw_p_values = np.array([pattern.p_value for pattern in quadratic_results])
         adjusted_p_values = stats.false_discovery_control(raw_p_values, method="bh")
@@ -292,6 +287,7 @@ def _build_nonlinearity_warnings(
             if adjusted_p > QUADRATIC_P_VALUE_THRESHOLD:
                 continue
 
+            quadratic_validated_pairs.add((pattern.feature, pattern.target))
             nonlinearity_patterns.append(pattern)
             p_validation = (
                 f"p ajustée = {adjusted_p:.2f}"
@@ -321,6 +317,19 @@ def _build_nonlinearity_warnings(
                     f"cette dynamique. Signal validé après correction "
                     f"Benjamini-Hochberg ({p_validation})."
                 )
+
+    for step_result in step_results:
+        if (step_result.feature, step_result.target) in quadratic_validated_pairs:
+            continue
+
+        nonlinearity_patterns.append(step_result)
+        warnings.append(
+            f"Relation non-linéaire détectée (paliers) entre "
+            f"'{step_result.feature}' et '{step_result.target}' : "
+            f"la régression linéaire peut être trompeuse sur cette paire. "
+            f"La relation fonctionne par tranches de tarification ou seuils, "
+            f"pas par une droite continue."
+        )
 
     covered_columns = _build_distribution_warnings(df, numeric_cols, warnings)
     return nonlinearity_patterns, covered_columns
