@@ -9,6 +9,7 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
+from decision_core.importer import import_file
 from decision_core.report import generate_report, render_text_summary, render_html
 from decision_core.reporting.warnings import _build_asymmetry_warnings
 from decision_core.models import SimulationConfig
@@ -132,7 +133,58 @@ class TestReportTopCorrelations:
             seen.add(pair)
 
 
-class TestReportIncludesAnomalyDetection:
+class TestReportNonlinearityConfounderRules:
+    def test_marketing_digital_suppresses_nonlinearity_when_canal_ad_is_strong_confounder(self):
+        examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "examples"))
+        df = import_file(os.path.join(examples_dir, "marketing_digital_2025.csv"))
+
+        report = generate_report(df)
+        warnings = report["warnings"]
+
+        assert any(
+            "spurieuse" in w.lower() and "cout_par_clic_cpc" in w.lower() and "cout_acquisition_cac" in w.lower()
+            for w in warnings
+        )
+        assert any(
+            "spurieuse" in w.lower() and "cliquer_ctr_pct" in w.lower() and "cout_par_clic_cpc" in w.lower()
+            for w in warnings
+        )
+        assert all(
+            "non-linéaire" not in w.lower()
+            for w in warnings
+            if ("cout_par_clic_cpc" in w.lower() and "cout_acquisition_cac" in w.lower())
+            or ("cliquer_ctr_pct" in w.lower() and "cout_par_clic_cpc" in w.lower())
+        )
+
+    def test_weak_confounder_allows_nonlinearity_warning(self):
+        n = 90
+        groups = np.repeat(["A", "B", "C"], n // 3)
+        x_base = np.linspace(0, 20, n)
+        x = x_base + np.array([ -0.3 if g == "A" else 0.0 if g == "B" else 0.3 for g in groups ])
+        y = 10 - 0.2 * (x_base - 10) ** 2 + np.array([ -0.3 if g == "A" else 0.0 if g == "B" else 0.3 for g in groups ]) + np.random.RandomState(0).normal(0, 0.1, n)
+        df = pd.DataFrame({
+            "Cliquer_CTR_Pct": x,
+            "Cout_Par_Clic_CPC": y,
+            "Canal_Ad": groups,
+        })
+
+        report = generate_report(df)
+        warnings = report["warnings"]
+
+        assert any("spurieuse" in w.lower() for w in warnings)
+        assert any("non-linéaire" in w.lower() for w in warnings)
+        assert any("cliquer_ctr_pct" in w.lower() and "cout_par_clic_cpc" in w.lower() for w in warnings)
+
+    def test_nonlinearity_warning_emitted_when_no_confounder_exists(self):
+        np.random.seed(42)
+        x = np.linspace(-10, 10, 40)
+        y = 10 - 0.5 * x ** 2 + np.random.RandomState(0).normal(0, 0.2, 40)
+        df = pd.DataFrame({"feature": x, "target": y})
+
+        report = generate_report(df)
+        warnings = report["warnings"]
+
+        assert any("non-linéaire" in w.lower() for w in warnings)
     def test_report_flags_obvious_anomaly(self):
         # Cas trouvé en audit : detect_anomalies_iqr existait, testé,
         # mais jamais appelé dans generate_report - une anomalie

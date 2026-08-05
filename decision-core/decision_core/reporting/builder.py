@@ -257,7 +257,7 @@ def generate_report(
 
     # Détection de non-linéarité (P1.2)
     nonlinearity_patterns, excluded_columns = _build_nonlinearity_warnings(
-        df, numeric_cols, top_correlations, warnings
+        df, numeric_cols, top_correlations, warnings, significant_subgroups
     )
 
     # Détection d'asymétrie (F3) : contextuelle à la simulation si elle existe,

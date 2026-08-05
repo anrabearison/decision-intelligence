@@ -15,6 +15,7 @@ from decision_core.stats.nonlinearity import (
     detect_quadratic_pattern,
     detect_step_pattern,
 )
+from decision_core.stats.regression import detect_confounders
 from decision_core.stats.distribution import (
     detect_count_data_distribution,
     detect_zero_inflation,
@@ -248,6 +249,7 @@ def _build_nonlinearity_warnings(
     numeric_cols: list[str],
     top_correlations: list,
     warnings: list[str],
+    significant_subgroups: list[dict] | None = None,
 ) -> list:
     """Détecte les patterns non-linéaires et ajoute des warnings pédagogiques.
 
@@ -261,6 +263,15 @@ def _build_nonlinearity_warnings(
         Liste des patterns non-linéaires détectés (pour réutilisation dans _build_simulation_warnings).
     """
     nonlinearity_patterns = []
+    significant_subgroups = significant_subgroups or []
+    subgroup_eta_squared = {
+        subgroup["column"]: subgroup["eta_squared"]
+        for subgroup in significant_subgroups
+    }
+
+    def _has_strong_confounder(feature: str, target: str) -> bool:
+        confounders = detect_confounders(df, target, feature)
+        return any(subgroup_eta_squared.get(confounder, 0) > 0.5 for confounder in confounders)
 
     # Limiter l'analyse aux paires de top_correlations pour éviter l'explosion combinatoire
     quadratic_results = []
@@ -268,6 +279,9 @@ def _build_nonlinearity_warnings(
     for corr in top_correlations:
         feature = corr["column_a"]
         target = corr["column_b"]
+
+        if _has_strong_confounder(feature, target):
+            continue
 
         quadratic_result = detect_quadratic_pattern(df, target, feature)
         if quadratic_result:
