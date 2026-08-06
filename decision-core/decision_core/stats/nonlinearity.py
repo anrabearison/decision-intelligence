@@ -142,33 +142,6 @@ def detect_quadratic_pattern(
 
     return None
 
-
-def _compute_eta_squared_continuous(
-    x: np.ndarray,
-    y: np.ndarray,
-    bins: int
-) -> float:
-    """Calcule l'eta-carré pour une variable continue discrétisée en bins.
-
-    Args:
-        x: Variable continue à discrétiser.
-        y: Variable cible numérique.
-        bins: Nombre de bins pour la discrétisation.
-
-    Returns:
-        Eta-carré (η²) mesurant la proportion de variance expliquée par les bins.
-    """
-    # Discrétisation en quantiles
-    try:
-        x_binned = pd.qcut(x, bins, duplicates='drop')
-    except ValueError:
-        # Si pas assez de valeurs uniques pour les quantiles
-        return 0.0
-
-    from decision_core.stats.anova import compute_eta_squared_with_significance
-    return compute_eta_squared_with_significance(y, x_binned).eta_squared
-
-
 def detect_step_pattern(
     df: pd.DataFrame,
     target: str,
