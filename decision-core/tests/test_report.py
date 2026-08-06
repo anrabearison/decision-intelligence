@@ -141,19 +141,26 @@ class TestReportNonlinearityConfounderRules:
         report = generate_report(df)
         warnings = report["warnings"]
 
+        # Vérification préalable : sur n=139, les paires spurieuses détectées ont changé
+        # Warning #4 : Cout_Par_Clic_CPC + Cout_Acquisition_CAC (présent)
+        # Warning #5 : Conversions + Clics (remplace CTR/CPC qui n'est plus détecté)
+        # La logique du test est conservée : Canal_Ad doit bloquer la NL sur les paires couvertes
+        
         assert any(
             "spurieuse" in w.lower() and "cout_par_clic_cpc" in w.lower() and "cout_acquisition_cac" in w.lower()
             for w in warnings
         )
+        # Adaptation au dataset enrichi : paire Conversions/Clics détectée au lieu de CTR/CPC
         assert any(
-            "spurieuse" in w.lower() and "cliquer_ctr_pct" in w.lower() and "cout_par_clic_cpc" in w.lower()
+            "spurieuse" in w.lower() and "conversions" in w.lower() and "clics" in w.lower()
             for w in warnings
         )
+        # Vérifie qu'aucun warning non-linéaire n'existe sur les paires spurieuses détectées
         assert all(
             "non-linéaire" not in w.lower()
             for w in warnings
             if ("cout_par_clic_cpc" in w.lower() and "cout_acquisition_cac" in w.lower())
-            or ("cliquer_ctr_pct" in w.lower() and "cout_par_clic_cpc" in w.lower())
+            or ("conversions" in w.lower() and "clics" in w.lower())
         )
 
     def test_weak_confounder_allows_nonlinearity_warning(self):

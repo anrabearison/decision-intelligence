@@ -7,11 +7,12 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
-from decision_core.regression import (
+from decision_core.stats.regression import (
     fit_simple_regression,
     fit_multivariate_regression,
     fit_logistic_regression,
     is_binary_target,
+    detect_confounders,
     InsufficientDataError,
 )
 from decision_core.simulation import simulate_scenario
@@ -217,6 +218,108 @@ class TestLogisticRegressionBinaryTarget:
         assert is_binary_target(df["binary"]) is True
         assert is_binary_target(df["non_binary"]) is False
 
+
+class TestDetectConfoundersEdgeCases:
+    """Tests pour les branches non couvertes dans detect_confounders (lignes 95-98, 111-112)."""
+    
+    def test_detect_confounders_skips_non_numeric_target(self):
+        """Test que detect_confounders skip quand target n'est pas numérique (ligne 95-96)."""
+        df = pd.DataFrame({
+            "target": ["A", "B", "A", "B", "A"],  # Non numérique
+            "feature": [1, 2, 3, 4, 5],
+            "confounder": ["X", "Y", "X", "Y", "X"],
+        })
+        confounders = detect_confounders(df, "target", "feature")
+        assert len(confounders) == 0
+
+    def test_detect_confounders_skips_non_numeric_feature(self):
+        """Test que detect_confounders skip quand feature n'est pas numérique (ligne 97-98)."""
+        df = pd.DataFrame({
+            "target": [1, 2, 3, 4, 5],
+            "feature": ["A", "B", "A", "B", "A"],  # Non numérique
+            "confounder": ["X", "Y", "X", "Y", "X"],
+        })
+        confounders = detect_confounders(df, "target", "feature")
+        assert len(confounders) == 0
+
+    def test_detect_confounders_handles_exceptions_gracefully(self):
+        """Test que detect_confounders gère les exceptions sans crasher (lignes 111-112)."""
+        # Cas qui pourrait provoquer une exception dans compute_eta_squared_with_significance
+        df = pd.DataFrame({
+            "target": [1, 2, 3, 4, 5],
+            "feature": [1, 2, 3, 4, 5],
+            "confounder": ["X", "Y", "X", "Y", "X"],
+        })
+        # Doit retourner une liste vide sans crasher même si compute_eta_squared échoue
+        confounders = detect_confounders(df, "target", "feature")
+        assert isinstance(confounders, list)
+
+
+class TestLogisticRegressionTypeValidation:
+    """Tests pour les branches non couvertes dans fit_logistic_regression (lignes 133, 135)."""
+    
+    def test_fit_logistic_regression_raises_on_non_numeric_feature(self):
+        """Test que fit_logistic_regression lève TypeError sur feature non numérique (ligne 133)."""
+        df = pd.DataFrame({
+            "feature": ["A", "B", "A", "B", "A"],  # Non numérique
+            "target": [0, 1, 0, 1, 0],
+        })
+        with pytest.raises(TypeError, match="doit être numérique"):
+            fit_logistic_regression(df, target="target", feature="feature")
+
+    def test_fit_logistic_regression_raises_on_non_numeric_target(self):
+        """Test que fit_logistic_regression lève TypeError sur target non numérique (ligne 135)."""
+        df = pd.DataFrame({
+            "feature": [1, 2, 3, 4, 5],
+            "target": ["A", "B", "A", "B", "A"],  # Non numérique
+        })
+        with pytest.raises(TypeError, match="doit être numérique"):
+            fit_logistic_regression(df, target="target", feature="feature")
+
+
+class TestSimpleRegressionTypeValidation:
+    """Tests pour les branches non couvertes dans fit_simple_regression (lignes 251, 256)."""
+    
+    def test_fit_simple_regression_raises_on_non_numeric_feature(self):
+        """Test que fit_simple_regression lève TypeError sur feature non numérique (ligne 251)."""
+        df = pd.DataFrame({
+            "feature": ["A", "B", "A", "B", "A"],  # Non numérique
+            "target": [1, 2, 3, 4, 5],
+        })
+        with pytest.raises(TypeError, match="doit être numérique"):
+            fit_simple_regression(df, target="target", feature="feature", encode_categorical=False)
+
+    def test_fit_simple_regression_raises_on_non_numeric_target(self):
+        """Test que fit_simple_regression lève TypeError sur target non numérique (ligne 256)."""
+        df = pd.DataFrame({
+            "feature": [1, 2, 3, 4, 5],
+            "target": ["A", "B", "A", "B", "A"],  # Non numérique
+        })
+        with pytest.raises(TypeError, match="doit être numérique"):
+            fit_simple_regression(df, target="target", feature="feature", encode_categorical=False)
+
+
+class TestSimpleRegressionEncodingBranch:
+    """Test pour la branche non couverte dans fit_simple_regression (ligne 250-251)."""
+    
+    def test_fit_simple_regression_with_categorical_encoding(self):
+        """Test que l'encodage catégoriel fonctionne quand activé (ligne 250-251)."""
+        df = pd.DataFrame({
+            "category": ["A", "B", "A", "B", "A", "B", "A", "B"],
+            "numeric": [1, 2, 3, 4, 5, 6, 7, 8],
+            "target": [10, 20, 15, 25, 12, 22, 18, 28],
+        })
+        # Avec encode_categorical=True, la colonne catégorielle doit être encodée
+        # Note : cette fonction encode les colonnes catégorielles puis vérifie que feature/target sont numériques
+        # Donc on utilise une colonne numérique pour feature et target
+        model = fit_simple_regression(df, target="target", feature="numeric", encode_categorical=True)
+        assert model is not None
+        assert model.r_squared >= 0
+
+
+class TestSimulationOnBinaryTarget:
+    """Tests existants pour la simulation sur cible binaire."""
+    
     def test_fit_simple_regression_auto_switches_to_logistic(self):
         """Test que fit_simple_regression bascule automatiquement sur logistique pour cible binaire."""
         df = pd.DataFrame({
