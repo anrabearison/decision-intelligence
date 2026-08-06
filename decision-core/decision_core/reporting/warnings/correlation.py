@@ -1,6 +1,7 @@
 """
 Warnings de corrélation pour decision-core.
 """
+import pandas as pd
 from decision_core.stats.profiling import MAX_COLUMNS_FOR_CORRELATION
 
 

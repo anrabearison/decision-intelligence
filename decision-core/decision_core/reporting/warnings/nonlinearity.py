@@ -2,6 +2,7 @@
 Warnings de non-linéarité P1.2 pour decision-core.
 """
 import numpy as np
+import pandas as pd
 from scipy import stats
 from decision_core.stats.nonlinearity import (
     QUADRATIC_P_VALUE_THRESHOLD,

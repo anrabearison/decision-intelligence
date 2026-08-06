@@ -1,6 +1,7 @@
 """
 Warnings d'asymétrie F3 pour decision-core.
 """
+import pandas as pd
 from .constants import ASYMMETRY_THRESHOLD
 
 

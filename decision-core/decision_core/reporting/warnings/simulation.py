@@ -1,6 +1,7 @@
 """
 Warnings de simulation pour decision-core.
 """
+import pandas as pd
 from decision_core.stats.regression import validate_regression_inputs
 from decision_core.stats.influence_detection import detect_influential_points
 from decision_core.models.nonlinearity import StepPatternResult

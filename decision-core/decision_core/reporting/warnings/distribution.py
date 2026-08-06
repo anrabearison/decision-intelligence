@@ -1,6 +1,7 @@
 """
 Warnings de distribution non-gaussienne pour decision-core.
 """
+import pandas as pd
 from decision_core.stats.distribution import (
     detect_count_data_distribution,
     detect_zero_inflation,
