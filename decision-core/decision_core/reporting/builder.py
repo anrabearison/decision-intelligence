@@ -28,6 +28,7 @@ from decision_core.reporting.warnings import (
     _build_asymmetry_warnings,
 )
 from decision_core.reporting.scoring import SMALL_SAMPLE_THRESHOLD
+from decision_core.reporting.context import ReportBuildContext
 
 
 def _normalize_configs(
@@ -147,6 +148,234 @@ def _extract_top_correlations(pairs: list, top_n: int = 5) -> list:
     return sorted_pairs[:top_n]
 
 
+def _initialize_context(
+    df: pd.DataFrame,
+    simulation_config: SimulationConfig | dict | None,
+    analysis_config: AnalysisConfig | dict | None,
+) -> ReportBuildContext:
+    """Initialise le contexte de construction du rapport.
+
+    Args:
+        df: DataFrame source.
+        simulation_config: Configuration de simulation typée ou dict.
+        analysis_config: Configuration d'analyse typée ou dict.
+
+    Returns:
+        ReportBuildContext initialisé.
+    """
+    typed_simulation, typed_analysis = _normalize_configs(
+        simulation_config, analysis_config
+    )
+    
+    warnings: list[str] = []
+    n_rows = len(df)
+    
+    if n_rows < SMALL_SAMPLE_THRESHOLD:
+        warnings.append(
+            f"Échantillon petit ({n_rows} lignes) : les résultats statistiques "
+            f"(corrélations, détection d'anomalies, régression) sont indicatifs, "
+            f"pas robustes. Recommandé : {SMALL_SAMPLE_THRESHOLD}+ lignes."
+        )
+    
+    return ReportBuildContext(
+        df=df,
+        typed_simulation=typed_simulation,
+        typed_analysis=typed_analysis,
+        warnings=warnings,
+        n_rows=n_rows,
+    )
+
+
+def _populate_validation_and_profiling(ctx: ReportBuildContext) -> None:
+    """Remplit la validation et le profiling dans le contexte.
+
+    Args:
+        ctx: Contexte de construction du rapport.
+    """
+    ctx.validation = validate_dataset(ctx.df)
+    ctx.numeric_cols = legitimate_numeric_columns(ctx.df)
+    ctx.profiling = {col: descriptive_stats(ctx.df[col]) for col in ctx.numeric_cols}
+    
+    if not ctx.numeric_cols:
+        ctx.warnings.append(
+            "Aucune colonne numérique exploitable détectée dans ce "
+            "fichier : statistiques, corrélations, détection d'anomalies "
+            "et simulation ne peuvent pas être calculées. Vérifiez que "
+            "vos colonnes numériques sont bien reconnues comme telles "
+            "(voir les limites de détection dans la documentation)."
+        )
+
+
+def _populate_anomalies(ctx: ReportBuildContext) -> None:
+    """Remplit les anomalies dans le contexte.
+
+    Args:
+        ctx: Contexte de construction du rapport.
+    """
+    ctx.anomalies = _build_anomalies_section(
+        ctx.df, ctx.numeric_cols, ctx.typed_analysis.iqr_k
+    )
+    
+    if ctx.anomalies:
+        cols_with_anomalies = ", ".join(ctx.anomalies.keys())
+        total_anomalies = sum(len(a["indices"]) for a in ctx.anomalies.values())
+        ctx.warnings.append(
+            f"Anomalie(s) détectée(s) sur {len(ctx.anomalies)} colonne(s) "
+            f"({cols_with_anomalies}) : {total_anomalies} valeur(s) "
+            f"hors de la plage habituelle au total, potentiellement des "
+            f"erreurs de saisie ou des cas exceptionnels à vérifier - "
+            f"elles peuvent fortement fausser la moyenne et l'écart-type "
+            f"affichés."
+        )
+
+
+def _populate_correlations(ctx: ReportBuildContext) -> None:
+    """Remplit les corrélations et les warnings associés dans le contexte.
+
+    Args:
+        ctx: Contexte de construction du rapport.
+    """
+    ctx.derived_relationships = detect_derived_relationships(ctx.df, ctx.numeric_cols)
+    ctx.top_correlations, ctx.corr_pairs = _build_correlations_section(
+        ctx.df, ctx.numeric_cols, ctx.derived_relationships
+    )
+    _build_correlation_warnings(
+        ctx.df, ctx.numeric_cols, ctx.corr_pairs, ctx.derived_relationships, ctx.warnings
+    )
+    
+    # Détection des facteurs confondants pour les corrélations principales
+    for corr in ctx.top_correlations[:3]:
+        confounders = detect_confounders(ctx.df, corr['column_a'], corr['column_b'])
+        if confounders:
+            ctx.warnings.append(
+                f"Corrélation potentielle spurieuse entre {corr['column_a']} et {corr['column_b']} : "
+                f"facteur(s) confondant(s) détecté(s) : {', '.join(confounders)}. "
+                f"Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe."
+            )
+
+
+def _populate_significant_subgroups(ctx: ReportBuildContext) -> None:
+    """Remplit les sous-groupes significatifs dans le contexte.
+
+    Args:
+        ctx: Contexte de construction du rapport.
+    """
+    if not ctx.numeric_cols:
+        return
+    
+    targets_to_scan = []
+    if ctx.typed_simulation is not None and ctx.typed_simulation.target in ctx.numeric_cols:
+        targets_to_scan = [ctx.typed_simulation.target]
+    else:
+        targets_to_scan = ctx.numeric_cols
+    
+    subgroup_map: dict[str, dict] = {}
+    for target in targets_to_scan:
+        for subgroup in detect_significant_subgroups(ctx.df, target):
+            column = subgroup["column"]
+            existing = subgroup_map.get(column)
+            if existing is None or subgroup["eta_squared"] > existing["eta_squared"]:
+                subgroup_map[column] = subgroup
+    
+    ctx.significant_subgroups = sorted(
+        subgroup_map.values(),
+        key=lambda s: s["eta_squared"],
+        reverse=True,
+    )[:5]
+    
+    for subgroup in ctx.significant_subgroups:
+        ctx.warnings.append(
+            f"Sous-groupe significatif détecté : '{subgroup['column']}' explique "
+            f"{subgroup['eta_squared']:.1%} de la variance de la cible. "
+            f"Considérez une analyse segmentée par cette variable pour des insights plus précis."
+        )
+
+
+def _populate_nonlinearity_and_asymmetry(ctx: ReportBuildContext) -> None:
+    """Remplit les patterns non-linéaires et les warnings d'asymétrie.
+
+    Args:
+        ctx: Contexte de construction du rapport.
+    """
+    # Détection de non-linéarité (P1.2)
+    ctx.nonlinearity_patterns, ctx.excluded_columns = _build_nonlinearity_warnings(
+        ctx.df,
+        ctx.numeric_cols,
+        ctx.top_correlations,
+        ctx.warnings,
+        ctx.significant_subgroups,
+        candidate_correlations=ctx.corr_pairs,
+        simulation_config=ctx.typed_simulation,
+    )
+    
+    # Détection d'asymétrie (F3)
+    _build_asymmetry_warnings(
+        ctx.df,
+        ctx.numeric_cols,
+        [s['column'] for s in ctx.significant_subgroups],
+        ctx.warnings,
+        simulation_config=ctx.typed_simulation,
+        excluded_columns=list(ctx.excluded_columns),
+    )
+
+
+def _populate_simulation(ctx: ReportBuildContext) -> None:
+    """Remplit la simulation si une configuration est fournie.
+
+    Args:
+        ctx: Contexte de construction du rapport.
+    """
+    if ctx.typed_simulation is not None:
+        ctx.simulation = _build_simulation_section(ctx.df, ctx.typed_simulation)
+        _build_simulation_warnings(
+            ctx.df, ctx.typed_simulation, ctx.simulation, ctx.n_rows, ctx.warnings, ctx.nonlinearity_patterns
+        )
+
+
+def _populate_seasonality_and_score(ctx: ReportBuildContext) -> None:
+    """Remplit la saisonnalité et calcule le score d'exploitabilité.
+
+    Args:
+        ctx: Contexte de construction du rapport.
+    """
+    # R8 : Saisonnalité (avant R9 pour intégrer le warning au score)
+    _build_seasonality_warnings(ctx.df, ctx.corr_pairs, ctx.warnings)
+    
+    # R9 : Score d'exploitabilité synthétique
+    sim_r_squared = (ctx.simulation or {}).get("model_r_squared")
+    ctx.exploitability = _compute_exploitability_score(
+        n_rows=ctx.n_rows,
+        n_warnings=len(ctx.warnings),
+        n_anomaly_cols=len(ctx.anomalies),
+        r_squared=sim_r_squared,
+    )
+
+
+def _build_report_result(ctx: ReportBuildContext) -> ReportResult:
+    """Construit le ReportResult final à partir du contexte.
+
+    Args:
+        ctx: Contexte de construction du rapport.
+
+    Returns:
+        ReportResult typé contenant toutes les sections du rapport.
+    """
+    return ReportResult(
+        dataset_summary=DatasetSummary(
+            n_rows=ctx.n_rows,
+            n_columns=len(ctx.df.columns),
+            numeric_columns=ctx.numeric_cols,
+        ),
+        validation=ctx.validation,
+        profiling=ctx.profiling,
+        anomalies=ctx.anomalies,
+        top_correlations=ctx.top_correlations,
+        warnings=ctx.warnings,
+        exploitability=ctx.exploitability,
+        simulation=ctx.simulation,
+    )
+
+
 def generate_report(
     df: pd.DataFrame,
     simulation_config: SimulationConfig | dict | None = None,
@@ -154,8 +383,8 @@ def generate_report(
 ) -> ReportResult:
     """Génère le rapport d'analyse complet du DataFrame.
 
-    Orchestre les sous-fonctions privées de construction de chaque section
-    du rapport (anomalies, corrélations, simulation, saisonnalité, exploitabilité).
+    Orchestre les étapes de construction du rapport via un contexte
+    structuré pour améliorer la maintenabilité.
 
     Args:
         df: DataFrame source (issu de import_file).
@@ -167,145 +396,12 @@ def generate_report(
     Returns:
         ReportResult typé contenant toutes les sections du rapport.
     """
-    typed_simulation, typed_analysis = _normalize_configs(
-        simulation_config, analysis_config
-    )
-
-    warnings: list[str] = []
-    n_rows = len(df)
-
-    if n_rows < SMALL_SAMPLE_THRESHOLD:
-        warnings.append(
-            f"Échantillon petit ({n_rows} lignes) : les résultats statistiques "
-            f"(corrélations, détection d'anomalies, régression) sont indicatifs, "
-            f"pas robustes. Recommandé : {SMALL_SAMPLE_THRESHOLD}+ lignes."
-        )
-
-    validation = validate_dataset(df)
-
-    numeric_cols = legitimate_numeric_columns(df)
-    profiling = {col: descriptive_stats(df[col]) for col in numeric_cols}
-
-    if not numeric_cols:
-        warnings.append(
-            "Aucune colonne numérique exploitable détectée dans ce "
-            "fichier : statistiques, corrélations, détection d'anomalies "
-            "et simulation ne peuvent pas être calculées. Vérifiez que "
-            "vos colonnes numériques sont bien reconnues comme telles "
-            "(voir les limites de détection dans la documentation)."
-        )
-
-    # — Anomalies —
-    anomalies = _build_anomalies_section(df, numeric_cols, typed_analysis.iqr_k)
-
-    if anomalies:
-        cols_with_anomalies = ", ".join(anomalies.keys())
-        total_anomalies = sum(len(a["indices"]) for a in anomalies.values())
-        warnings.append(
-            f"Anomalie(s) détectée(s) sur {len(anomalies)} colonne(s) "
-            f"({cols_with_anomalies}) : {total_anomalies} valeur(s) "
-            f"hors de la plage habituelle au total, potentiellement des "
-            f"erreurs de saisie ou des cas exceptionnels à vérifier - "
-            f"elles peuvent fortement fausser la moyenne et l'écart-type "
-            f"affichés."
-        )
-
-    # — Corrélations —
-    derived_relationships = detect_derived_relationships(df, numeric_cols)
-    top_correlations, corr_pairs = _build_correlations_section(df, numeric_cols, derived_relationships)
-    _build_correlation_warnings(df, numeric_cols, corr_pairs, derived_relationships, warnings)
-    
-    # Détection des facteurs confondants pour les corrélations principales
-    for corr in top_correlations[:3]:  # Vérifier les 3 premières corrélations
-        confounders = detect_confounders(df, corr['column_a'], corr['column_b'])
-        if confounders:
-            warnings.append(
-                f"Corrélation potentielle spurieuse entre {corr['column_a']} et {corr['column_b']} : "
-                f"facteur(s) confondant(s) détecté(s) : {', '.join(confounders)}. "
-                f"Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe."
-            )
-    
-    # Détection des sous-groupes significatifs (seulement si des colonnes numériques existent)
-    significant_subgroups = []
-    if numeric_cols:
-        targets_to_scan = []
-        if typed_simulation is not None and typed_simulation.target in numeric_cols:
-            targets_to_scan = [typed_simulation.target]
-        else:
-            targets_to_scan = numeric_cols
-
-        subgroup_map: dict[str, dict] = {}
-        for target in targets_to_scan:
-            for subgroup in detect_significant_subgroups(df, target):
-                column = subgroup["column"]
-                existing = subgroup_map.get(column)
-                if existing is None or subgroup["eta_squared"] > existing["eta_squared"]:
-                    subgroup_map[column] = subgroup
-
-        significant_subgroups = sorted(
-            subgroup_map.values(),
-            key=lambda s: s["eta_squared"],
-            reverse=True,
-        )[:5]
-
-        for subgroup in significant_subgroups:
-            warnings.append(
-                f"Sous-groupe significatif détecté : '{subgroup['column']}' explique "
-                f"{subgroup['eta_squared']:.1%} de la variance de la cible. "
-                f"Considérez une analyse segmentée par cette variable pour des insights plus précis."
-            )
-
-    # Détection de non-linéarité (P1.2)
-    nonlinearity_patterns, excluded_columns = _build_nonlinearity_warnings(
-        df,
-        numeric_cols,
-        top_correlations,
-        warnings,
-        significant_subgroups,
-        candidate_correlations=corr_pairs,
-        simulation_config=typed_simulation,
-    )
-
-    # Détection d'asymétrie (F3) : contextuelle à la simulation si elle existe,
-    # descriptive et limitée sinon pour éviter de noyer l'utilisateur.
-    _build_asymmetry_warnings(
-        df,
-        numeric_cols,
-        [s['column'] for s in significant_subgroups],
-        warnings,
-        simulation_config=typed_simulation,
-        excluded_columns=list(excluded_columns),
-    )
-
-    # — Simulation (optionnelle) —
-    sim_dict: dict | None = None
-    if typed_simulation is not None:
-        sim_dict = _build_simulation_section(df, typed_simulation)
-        _build_simulation_warnings(df, typed_simulation, sim_dict, n_rows, warnings, nonlinearity_patterns)
-
-    # — R8 : Saisonnalité (avant R9 pour intégrer le warning au score) —
-    _build_seasonality_warnings(df, corr_pairs, warnings)
-
-    # — R9 : Score d'exploitabilité synthétique —
-    sim_r_squared = (sim_dict or {}).get("model_r_squared")
-    exploitability = _compute_exploitability_score(
-        n_rows=n_rows,
-        n_warnings=len(warnings),
-        n_anomaly_cols=len(anomalies),
-        r_squared=sim_r_squared,
-    )
-
-    return ReportResult(
-        dataset_summary=DatasetSummary(
-            n_rows=n_rows,
-            n_columns=len(df.columns),
-            numeric_columns=numeric_cols,
-        ),
-        validation=validation,
-        profiling=profiling,
-        anomalies=anomalies,
-        top_correlations=top_correlations,
-        warnings=warnings,
-        exploitability=exploitability,
-        simulation=sim_dict,
-    )
+    ctx = _initialize_context(df, simulation_config, analysis_config)
+    _populate_validation_and_profiling(ctx)
+    _populate_anomalies(ctx)
+    _populate_correlations(ctx)
+    _populate_significant_subgroups(ctx)
+    _populate_nonlinearity_and_asymmetry(ctx)
+    _populate_simulation(ctx)
+    _populate_seasonality_and_score(ctx)
+    return _build_report_result(ctx)
