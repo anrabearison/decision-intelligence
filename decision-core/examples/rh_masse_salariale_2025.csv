@@ -1,21 +1,120 @@
-Matricule;Departement;Anciennete_Annees;Heures_Sup_Mensuelles;Formation_Jours;Salaire_Brut_Mensuel;Score_Evaluation
-EMP001;RH;2,5;4;2;3100,50;7,8
-EMP002;RH;5,0;2;5;3850,00;8,2
-EMP003;RH;1,0;8;1;2800,00;6,5
-EMP004;Tech;3,5;15;10;4500,00;9,1
-EMP005;Tech;7,0;20;12;5800,00;9,5
-EMP006;Tech;0,5;22;4;3600,00;7,2
-EMP007;Tech;4,0;12;8;4800,00;8,7
-EMP008;Ventes;6,0;10;3;4200,00;8,0
-EMP009;Ventes;2,0;14;2;3400,00;7,5
-EMP010;Ventes;8,5;5;1;4900,00;8,4
-EMP011;Ventes;1,5;18;4;3200,00;6,9
-EMP012;Marketing;4,5;6;6;3950,00;8,1
-EMP013;Marketing;2,0;9;3;3300,00;7,4
-EMP014;Marketing;9,0;3;7;5100,00;8,9
-EMP015;Marketing;0,8;12;2;3050,00;6,8
-EMP016;Tech;12,0;5;15;7200,00;9,8
-EMP017;Tech;2,0;25;5;3900,00;7,9
-EMP018;RH;10,0;1;4;4600,00;8,5
-EMP019;Ventes;11,0;8;2;5400,00;8,8
-EMP020;Marketing;6,5;7;8;4400,00;8,3
+Matricule;Departement;Anciennete_Annees;Heures_Sup_Mensuelles;Formation_Jours;Salaire_Brut_Mensuel;Score_Evaluation;Employe_ID;Poste;Salaire_Annuel_Euros;Performance_Note
+EMP001;RH;2,5;4.0;2.0;3100,50;7,8;;;;
+EMP002;RH;5,0;2.0;5.0;3850,00;8,2;;;;
+EMP003;RH;1,0;8.0;1.0;2800,00;6,5;;;;
+EMP004;Tech;3,5;15.0;10.0;4500,00;9,1;;;;
+EMP005;Tech;7,0;20.0;12.0;5800,00;9,5;;;;
+EMP006;Tech;0,5;22.0;4.0;3600,00;7,2;;;;
+EMP007;Tech;4,0;12.0;8.0;4800,00;8,7;;;;
+EMP008;Ventes;6,0;10.0;3.0;4200,00;8,0;;;;
+EMP009;Ventes;2,0;14.0;2.0;3400,00;7,5;;;;
+EMP010;Ventes;8,5;5.0;1.0;4900,00;8,4;;;;
+EMP011;Ventes;1,5;18.0;4.0;3200,00;6,9;;;;
+EMP012;Marketing;4,5;6.0;6.0;3950,00;8,1;;;;
+EMP013;Marketing;2,0;9.0;3.0;3300,00;7,4;;;;
+EMP014;Marketing;9,0;3.0;7.0;5100,00;8,9;;;;
+EMP015;Marketing;0,8;12.0;2.0;3050,00;6,8;;;;
+EMP016;Tech;12,0;5.0;15.0;7200,00;9,8;;;;
+EMP017;Tech;2,0;25.0;5.0;3900,00;7,9;;;;
+EMP018;RH;10,0;1.0;4.0;4600,00;8,5;;;;
+EMP019;Ventes;11,0;8.0;2.0;5400,00;8,8;;;;
+EMP020;Marketing;6,5;7.0;8.0;4400,00;8,3;;;;
+;Production;11;;;;;EMP-021;Opérateur;36696.0;5.6
+;RH;12;;;;;EMP-022;Business Partner;34569.0;7.3
+;Ventes;0;;;;;EMP-023;Commercial;36420.0;5.6
+;Ventes;3;;;;;EMP-024;Account Manager;42898.0;7.9
+;Production;8;;;;;EMP-025;Opérateur;35736.0;6.1
+;Finance;16;;;;;EMP-026;Analyste;43773.0;5.8
+;Production;8;;;;;EMP-027;Opérateur;33539.0;4.8
+;Ventes;17;;;;;EMP-028;Account Manager;44910.0;4.9
+;Production;7;;;;;EMP-029;Contremaître;33312.0;6.0
+;Marketing;10;;;;;EMP-030;CM;42889.0;6.2
+;RH;7;;;;;EMP-031;Business Partner;39596.0;6.4
+;RH;12;;;;;EMP-032;Recruteur;36296.0;6.2
+;Finance;7;;;;;EMP-033;Analyste;43146.0;6.5
+;RH;10;;;;;EMP-034;Business Partner;34689.0;5.8
+;Production;3;;;;;EMP-035;Opérateur;33500.0;6.9
+;Finance;2;;;;;EMP-036;Analyste;44371.0;7.1
+;Ventes;18;;;;;EMP-037;Account Manager;43100.0;4.9
+;IT;6;;;;;EMP-038;Développeur;45435.0;7.9
+;IT;1;;;;;EMP-039;Data Scientist;44428.0;6.5
+;IT;9;;;;;EMP-040;Développeur;48096.0;7.4
+;IT;9;;;;;EMP-041;Data Scientist;43747.0;7.4
+;Production;19;;;;;EMP-042;Contremaître;27785.0;5.3
+;Finance;6;;;;;EMP-043;Comptable;46768.0;6.8
+;Marketing;16;;;;;EMP-044;CM;36713.0;7.0
+;Marketing;14;;;;;EMP-045;SEO;42739.0;4.0
+;IT;17;;;;;EMP-046;Data Scientist;47788.0;4.8
+;IT;1;;;;;EMP-047;SysAdmin;39976.0;6.0
+;Finance;16;;;;;EMP-048;Analyste;39371.0;4.0
+;Finance;9;;;;;EMP-049;Comptable;46860.0;7.3
+;Finance;18;;;;;EMP-050;Analyste;39392.0;5.1
+;Finance;18;;;;;EMP-051;Analyste;40464.0;4.5
+;Marketing;6;;;;;EMP-052;Designer;37682.0;7.7
+;RH;1;;;;;EMP-053;Business Partner;35828.0;5.5
+;Marketing;18;;;;;EMP-054;SEO;38257.0;5.1
+;Marketing;13;;;;;EMP-055;SEO;43010.0;7.5
+;Marketing;6;;;;;EMP-056;SEO;39093.0;7.1
+;Marketing;8;;;;;EMP-057;CM;44602.0;6.3
+;Finance;5;;;;;EMP-058;Analyste;47267.0;5.0
+;Marketing;12;;;;;EMP-059;CM;40503.0;7.3
+;IT;15;;;;;EMP-060;Data Scientist;45114.0;7.6
+;Production;10;;;;;EMP-061;Technicien;33117.0;4.7
+;Marketing;2;;;;;EMP-062;SEO;34762.0;5.5
+;Ventes;5;;;;;EMP-063;Account Manager;43190.0;8.0
+;Marketing;15;;;;;EMP-064;Designer;42855.0;8.2
+;Marketing;4;;;;;EMP-065;SEO;39999.0;6.0
+;Finance;19;;;;;EMP-066;Analyste;42137.0;4.7
+;Finance;7;;;;;EMP-067;Comptable;48612.0;4.9
+;RH;3;;;;;EMP-068;Recruteur;31787.0;7.0
+;RH;10;;;;;EMP-069;Recruteur;35902.0;6.5
+;Marketing;0;;;;;EMP-070;Designer;34228.0;5.1
+;Ventes;1;;;;;EMP-071;Commercial;38828.0;5.8
+;IT;13;;;;;EMP-072;Développeur;45619.0;7.0
+;Ventes;6;;;;;EMP-073;Commercial;45197.0;5.2
+;Marketing;13;;;;;EMP-074;CM;44600.0;5.4
+;Ventes;5;;;;;EMP-075;Account Manager;46199.0;7.6
+;Marketing;18;;;;;EMP-076;SEO;35773.0;6.9
+;Finance;19;;;;;EMP-077;Analyste;35782.0;5.2
+;Production;7;;;;;EMP-078;Contremaître;33950.0;6.8
+;Production;5;;;;;EMP-079;Contremaître;29337.0;4.8
+;Ventes;0;;;;;EMP-080;Commercial;36022.0;4.3
+;Marketing;17;;;;;EMP-081;SEO;40927.0;6.6
+;Finance;3;;;;;EMP-082;Analyste;38395.0;6.5
+;IT;11;;;;;EMP-083;Data Scientist;46110.0;6.0
+;Ventes;14;;;;;EMP-084;Commercial;45736.0;6.5
+;Finance;4;;;;;EMP-085;Comptable;47146.0;6.0
+;Production;1;;;;;EMP-086;Opérateur;30675.0;5.5
+;Finance;1;;;;;EMP-087;Comptable;36175.0;7.3
+;RH;4;;;;;EMP-088;Business Partner;37808.0;5.6
+;IT;15;;;;;EMP-089;SysAdmin;42232.0;6.3
+;IT;16;;;;;EMP-090;SysAdmin;46259.0;4.0
+;IT;8;;;;;EMP-091;Data Scientist;50564.0;6.1
+;Ventes;2;;;;;EMP-092;Commercial;43474.0;5.9
+;IT;15;;;;;EMP-093;Développeur;41772.0;8.1
+;RH;6;;;;;EMP-094;Recruteur;38479.0;6.7
+;IT;2;;;;;EMP-095;SysAdmin;41130.0;5.3
+;RH;3;;;;;EMP-096;Business Partner;35778.0;6.3
+;RH;8;;;;;EMP-097;Recruteur;35851.0;7.2
+;Production;11;;;;;EMP-098;Technicien;30568.0;7.3
+;RH;9;;;;;EMP-099;Business Partner;40396.0;6.8
+;Finance;14;;;;;EMP-100;Comptable;45570.0;5.9
+;IT;13;;;;;EMP-101;SysAdmin;43895.0;6.4
+;Production;2;;;;;EMP-102;Technicien;28564.0;5.9
+;IT;1;;;;;EMP-103;SysAdmin;44123.0;5.4
+;Production;9;;;;;EMP-104;Contremaître;33364.0;6.8
+;IT;15;;;;;EMP-105;SysAdmin;49967.0;5.2
+;RH;8;;;;;EMP-106;Business Partner;40417.0;5.0
+;Finance;7;;;;;EMP-107;Comptable;47200.0;5.2
+;Marketing;17;;;;;EMP-108;SEO;34860.0;4.0
+;Marketing;16;;;;;EMP-109;CM;39159.0;7.1
+;Marketing;4;;;;;EMP-110;SEO;39575.0;5.1
+;Finance;3;;;;;EMP-111;Analyste;40524.0;7.5
+;Finance;9;;;;;EMP-112;Analyste;41494.0;6.2
+;Production;3;;;;;EMP-113;Technicien;31149.0;6.3
+;Ventes;10;;;;;EMP-114;Account Manager;44436.0;8.3
+;Marketing;1;;;;;EMP-115;SEO;37579.0;6.6
+;Marketing;16;;;;;EMP-116;Designer;36668.0;6.3
+;Ventes;5;;;;;EMP-117;Account Manager;46961.0;8.1
+;Production;17;;;;;EMP-118;Technicien;28899.0;4.7
+;Marketing;2;;;;;EMP-119;SEO;37945.0;6.5

@@ -1,15 +1,100 @@
-Jour_Semaine;Meteo;Nombre_Couverts;Ticket_Moyen_Euros;Gaspillage_Alimentaire_Kg;Chiffre_Affaires_Jour
-Lundi;Soleil;45;28,50;6,2;1282,50
-Mardi;Pluie;38;26,00;8,5;988,00
-Mercredi;Soleil;52;29,00;5,0;1508,00
-Jeudi;Nuage;60;31,50;4,8;1890,00
-Vendredi;Soleil;110;38,00;3,2;4180,00
-Samedi;Soleil;135;42,50;2,5;5737,50
-Dimanche;Pluie;70;34,00;7,1;2380,00
-Lundi;Pluie;32;25,50;9,0;816,00
-Mardi;Soleil;48;28,00;5,5;1344,00
-Mercredi;Nuage;55;30,00;4,9;1650,00
-Jeudi;Soleil;65;33,00;4,1;2145,00
-Vendredi;Nuage;105;37,50;3,8;3937,50
-Samedi;Pluie;115;39,00;5,2;4485,00
-Dimanche;Soleil;85;36,00;3,0;3060,00
+Jour_Semaine;Meteo;Nombre_Couverts;Ticket_Moyen_Euros;Gaspillage_Alimentaire_Kg;Chiffre_Affaires_Jour;Plat_ID;Categorie_Plat;Prix_Vente_Euros;Cout_Preparation_Euros;Quantite_Vendue_Jour;Note_Client_Moyenne
+Lundi;Soleil;45.0;28,50;6,2;1282,50;;;;;;
+Mardi;Pluie;38.0;26,00;8,5;988,00;;;;;;
+Mercredi;Soleil;52.0;29,00;5,0;1508,00;;;;;;
+Jeudi;Nuage;60.0;31,50;4,8;1890,00;;;;;;
+Vendredi;Soleil;110.0;38,00;3,2;4180,00;;;;;;
+Samedi;Soleil;135.0;42,50;2,5;5737,50;;;;;;
+Dimanche;Pluie;70.0;34,00;7,1;2380,00;;;;;;
+Lundi;Pluie;32.0;25,50;9,0;816,00;;;;;;
+Mardi;Soleil;48.0;28,00;5,5;1344,00;;;;;;
+Mercredi;Nuage;55.0;30,00;4,9;1650,00;;;;;;
+Jeudi;Soleil;65.0;33,00;4,1;2145,00;;;;;;
+Vendredi;Nuage;105.0;37,50;3,8;3937,50;;;;;;
+Samedi;Pluie;115.0;39,00;5,2;4485,00;;;;;;
+Dimanche;Soleil;85.0;36,00;3,0;3060,00;;;;;;
+;;;;;;PLA-015;Dessert;7.03;1.82;63.0;9.8
+;;;;;;PLA-016;Boisson;8.74;1.18;41.0;10.0
+;;;;;;PLA-017;Dessert;7.94;2.12;29.0;9.6
+;;;;;;PLA-018;Entrée;11.91;3.03;19.0;10.0
+;;;;;;PLA-019;Entrée;11.74;3.15;22.0;10.0
+;;;;;;PLA-020;Boisson;7.84;1.08;50.0;10.0
+;;;;;;PLA-021;Entrée;9.98;3.26;34.0;9.3
+;;;;;;PLA-022;Boisson;5.89;0.99;58.0;10.0
+;;;;;;PLA-023;Dessert;7.01;2.28;36.0;9.5
+;;;;;;PLA-024;Boisson;6.94;1.16;44.0;10.0
+;;;;;;PLA-025;Entrée;14.8;3.43;13.0;10.0
+;;;;;;PLA-026;Plat principal;17.78;6.83;38.0;8.1
+;;;;;;PLA-027;Plat principal;23.8;5.93;30.0;10.0
+;;;;;;PLA-028;Boisson;8.24;0.98;34.0;9.6
+;;;;;;PLA-029;Dessert;9.51;1.94;32.0;9.8
+;;;;;;PLA-030;Entrée;10.05;2.89;35.0;10.0
+;;;;;;PLA-031;Boisson;6.4;1.06;39.0;10.0
+;;;;;;PLA-032;Boisson;7.36;1.13;47.0;9.9
+;;;;;;PLA-033;Boisson;7.11;1.02;34.0;10.0
+;;;;;;PLA-034;Plat principal;20.71;6.96;34.0;9.3
+;;;;;;PLA-035;Dessert;10.09;2.01;22.0;10.0
+;;;;;;PLA-036;Plat principal;21.24;7.1;29.0;9.0
+;;;;;;PLA-037;Boisson;6.76;1.12;64.0;10.0
+;;;;;;PLA-038;Dessert;8.98;2.32;32.0;9.6
+;;;;;;PLA-039;Dessert;7.04;1.92;59.0;9.5
+;;;;;;PLA-040;Entrée;11.82;3.0;17.0;9.5
+;;;;;;PLA-041;Boisson;5.1;0.91;83.0;9.9
+;;;;;;PLA-042;Plat principal;15.17;5.59;59.0;8.7
+;;;;;;PLA-043;Plat principal;14.48;5.73;70.0;8.8
+;;;;;;PLA-044;Entrée;12.03;3.44;26.0;9.8
+;;;;;;PLA-045;Dessert;8.2;2.17;27.0;9.7
+;;;;;;PLA-046;Dessert;11.47;2.0;28.0;10.0
+;;;;;;PLA-047;Entrée;8.53;2.93;37.0;9.1
+;;;;;;PLA-048;Boisson;6.82;0.93;60.0;10.0
+;;;;;;PLA-049;Boisson;5.33;1.17;53.0;9.2
+;;;;;;PLA-050;Dessert;11.52;2.34;17.0;10.0
+;;;;;;PLA-051;Dessert;7.85;1.92;29.0;9.5
+;;;;;;PLA-052;Entrée;10.36;2.82;35.0;9.1
+;;;;;;PLA-053;Dessert;11.23;2.02;20.0;10.0
+;;;;;;PLA-054;Boisson;8.46;1.09;28.0;10.0
+;;;;;;PLA-055;Entrée;14.04;3.23;15.0;9.3
+;;;;;;PLA-056;Plat principal;18.14;5.6;48.0;10.0
+;;;;;;PLA-057;Boisson;8.27;1.17;26.0;10.0
+;;;;;;PLA-058;Plat principal;24.24;5.69;41.0;10.0
+;;;;;;PLA-059;Plat principal;17.83;6.45;56.0;9.7
+;;;;;;PLA-060;Dessert;10.83;1.92;24.0;10.0
+;;;;;;PLA-061;Dessert;10.65;2.04;25.0;9.6
+;;;;;;PLA-062;Dessert;11.42;1.98;21.0;9.7
+;;;;;;PLA-063;Plat principal;22.7;6.08;29.0;9.9
+;;;;;;PLA-064;Boisson;5.65;0.91;52.0;10.0
+;;;;;;PLA-065;Entrée;13.05;3.56;14.0;9.5
+;;;;;;PLA-066;Boisson;6.12;1.2;73.0;10.0
+;;;;;;PLA-067;Dessert;8.87;1.88;30.0;10.0
+;;;;;;PLA-068;Entrée;11.62;2.82;27.0;9.1
+;;;;;;PLA-069;Plat principal;15.46;6.9;50.0;9.6
+;;;;;;PLA-070;Boisson;5.67;1.05;71.0;9.9
+;;;;;;PLA-071;Entrée;12.18;2.88;22.0;9.6
+;;;;;;PLA-072;Boisson;5.81;1.06;45.0;10.0
+;;;;;;PLA-073;Plat principal;23.71;6.61;26.0;9.4
+;;;;;;PLA-074;Dessert;6.64;2.11;55.0;9.3
+;;;;;;PLA-075;Plat principal;15.79;6.16;66.0;9.4
+;;;;;;PLA-076;Boisson;6.69;1.11;35.0;10.0
+;;;;;;PLA-077;Plat principal;19.68;6.13;51.0;9.4
+;;;;;;PLA-078;Boisson;7.94;1.13;36.0;10.0
+;;;;;;PLA-079;Entrée;13.48;2.75;22.0;9.7
+;;;;;;PLA-080;Boisson;5.12;0.97;73.0;10.0
+;;;;;;PLA-081;Plat principal;22.49;6.9;36.0;10.0
+;;;;;;PLA-082;Entrée;13.41;3.15;17.0;9.4
+;;;;;;PLA-083;Entrée;10.76;3.19;26.0;10.0
+;;;;;;PLA-084;Dessert;9.4;2.07;36.0;9.7
+;;;;;;PLA-085;Dessert;8.61;2.04;37.0;10.0
+;;;;;;PLA-086;Boisson;6.55;1.08;67.0;9.8
+;;;;;;PLA-087;Entrée;14.08;3.37;13.0;9.7
+;;;;;;PLA-088;Boisson;4.84;0.92;64.0;10.0
+;;;;;;PLA-089;Entrée;10.89;3.45;24.0;10.0
+;;;;;;PLA-090;Entrée;8.4;2.87;32.0;8.2
+;;;;;;PLA-091;Boisson;5.1;1.05;95.0;9.8
+;;;;;;PLA-092;Plat principal;20.39;7.17;42.0;9.1
+;;;;;;PLA-093;Boisson;8.6;0.92;29.0;10.0
+;;;;;;PLA-094;Boisson;4.83;1.06;87.0;9.4
+;;;;;;PLA-095;Plat principal;20.24;6.48;53.0;9.9
+;;;;;;PLA-096;Plat principal;26.84;6.78;31.0;10.0
+;;;;;;PLA-097;Boisson;6.98;1.09;38.0;10.0
+;;;;;;PLA-098;Dessert;7.04;2.22;48.0;9.7
+;;;;;;PLA-099;Boisson;5.66;0.94;71.0;10.0

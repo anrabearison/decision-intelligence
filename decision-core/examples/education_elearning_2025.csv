@@ -1,16 +1,120 @@
-Etudiant_ID;Niveau;Temps_Video_Heures;Exercices_Completes;Tentatives_Quiz;Note_Examen_Sur_20
-ETU-201;Licence;12;25;5;11,5
-ETU-202;Licence;25;50;10;15,0
-ETU-203;Licence;40;80;15;18,5
-ETU-204;Master;45;90;18;19,5
-ETU-205;Master;60;100;22;20,0
-ETU-206;Licence;5;10;2;8,0
-ETU-207;Licence;18;35;7;13,0
-ETU-208;Master;35;70;14;17,5
-ETU-209;Master;50;95;20;20,0
-ETU-210;Licence;8;15;3;9,5
-ETU-211;Master;70;100;25;20,0
-ETU-212;Licence;30;60;12;16,5
-ETU-213;Licence;22;45;9;14,0
-ETU-214;Master;55;98;21;20,0
-ETU-215;Licence;15;30;6=;12,0
+Etudiant_ID;Niveau;Temps_Video_Heures;Exercices_Completes;Tentatives_Quiz;Note_Examen_Sur_20;Niveau_Etude;Temps_Apprentissage_Heures_Semaine;Type_Cours;Score_Final;Taux_Completion_Pct
+ETU-201;Licence;12.0;25.0;5;11,5;;;;;
+ETU-202;Licence;25.0;50.0;10;15,0;;;;;
+ETU-203;Licence;40.0;80.0;15;18,5;;;;;
+ETU-204;Master;45.0;90.0;18;19,5;;;;;
+ETU-205;Master;60.0;100.0;22;20,0;;;;;
+ETU-206;Licence;5.0;10.0;2;8,0;;;;;
+ETU-207;Licence;18.0;35.0;7;13,0;;;;;
+ETU-208;Master;35.0;70.0;14;17,5;;;;;
+ETU-209;Master;50.0;95.0;20;20,0;;;;;
+ETU-210;Licence;8.0;15.0;3;9,5;;;;;
+ETU-211;Master;70.0;100.0;25;20,0;;;;;
+ETU-212;Licence;30.0;60.0;12;16,5;;;;;
+ETU-213;Licence;22.0;45.0;9;14,0;;;;;
+ETU-214;Master;55.0;98.0;21;20,0;;;;;
+ETU-215;Licence;15.0;30.0;6=;12,0;;;;;
+ETU-016;;;;;;Formation Pro;14.0;Management;87.3;76.5
+ETU-017;;;;;;Licence;21.0;Technique;77.4;61.9
+ETU-018;;;;;;Formation Pro;17.0;Technique;67.5;54.3
+ETU-019;;;;;;Licence;7.0;Arts;65.1;59.3
+ETU-020;;;;;;Doctorat;14.0;Management;92.0;84.2
+ETU-021;;;;;;Doctorat;18.0;Management;64.1;53.0
+ETU-022;;;;;;Licence;17.0;Langues;79.4;69.8
+ETU-023;;;;;;Licence;20.0;Technique;77.7;68.7
+ETU-024;;;;;;Doctorat;14.0;Arts;89.0;88.7
+ETU-025;;;;;;Master;19.0;Sciences;91.5;78.1
+ETU-026;;;;;;Doctorat;24.0;Management;65.1;57.6
+ETU-027;;;;;;Master;11.0;Arts;54.0;56.7
+ETU-028;;;;;;Licence;24.0;Langues;60.2;50.8
+ETU-029;;;;;;Doctorat;6.0;Arts;64.9;53.5
+ETU-030;;;;;;Formation Pro;7.0;Arts;62.6;55.4
+ETU-031;;;;;;Doctorat;5.0;Langues;56.3;40.9
+ETU-032;;;;;;Master;19.0;Arts;76.9;66.6
+ETU-033;;;;;;Licence;10.0;Langues;58.0;48.8
+ETU-034;;;;;;Master;7.0;Arts;70.0;63.7
+ETU-035;;;;;;Master;13.0;Sciences;80.6;72.6
+ETU-036;;;;;;Licence;7.0;Sciences;89.9;89.9
+ETU-037;;;;;;Doctorat;10.0;Sciences;64.7;59.6
+ETU-038;;;;;;Doctorat;11.0;Management;91.7;81.2
+ETU-039;;;;;;Master;3.0;Management;58.5;44.5
+ETU-040;;;;;;Licence;15.0;Sciences;84.3;73.0
+ETU-041;;;;;;Formation Pro;8.0;Arts;61.6;53.2
+ETU-042;;;;;;Master;21.0;Langues;70.8;61.2
+ETU-043;;;;;;Doctorat;5.0;Technique;60.5;54.5
+ETU-044;;;;;;Master;22.0;Sciences;85.0;78.7
+ETU-045;;;;;;Doctorat;18.0;Sciences;85.2;80.8
+ETU-046;;;;;;Master;10.0;Sciences;63.3;59.6
+ETU-047;;;;;;Doctorat;15.0;Technique;71.2;62.4
+ETU-048;;;;;;Formation Pro;7.0;Management;74.1;62.5
+ETU-049;;;;;;Master;10.0;Langues;80.2;74.4
+ETU-050;;;;;;Doctorat;5.0;Sciences;91.1;79.6
+ETU-051;;;;;;Doctorat;8.0;Technique;84.8;71.2
+ETU-052;;;;;;Licence;3.0;Langues;76.3;82.7
+ETU-053;;;;;;Formation Pro;13.0;Langues;80.2;72.1
+ETU-054;;;;;;Doctorat;12.0;Management;93.6;80.7
+ETU-055;;;;;;Formation Pro;21.0;Technique;78.3;75.8
+ETU-056;;;;;;Licence;24.0;Management;69.8;71.5
+ETU-057;;;;;;Doctorat;24.0;Sciences;83.9;73.8
+ETU-058;;;;;;Formation Pro;4.0;Langues;74.8;66.1
+ETU-059;;;;;;Licence;21.0;Sciences;70.0;74.7
+ETU-060;;;;;;Doctorat;13.0;Management;91.1;79.1
+ETU-061;;;;;;Master;14.0;Langues;89.7;85.3
+ETU-062;;;;;;Master;21.0;Technique;84.8;77.1
+ETU-063;;;;;;Formation Pro;2.0;Arts;84.4;72.6
+ETU-064;;;;;;Master;18.0;Langues;70.5;57.7
+ETU-065;;;;;;Licence;17.0;Management;78.5;75.9
+ETU-066;;;;;;Licence;8.0;Technique;76.2;68.1
+ETU-067;;;;;;Formation Pro;3.0;Sciences;63.7;51.9
+ETU-068;;;;;;Doctorat;24.0;Arts;89.5;79.4
+ETU-069;;;;;;Formation Pro;14.0;Langues;81.7;72.8
+ETU-070;;;;;;Master;22.0;Langues;80.9;73.6
+ETU-071;;;;;;Doctorat;13.0;Langues;90.7;78.7
+ETU-072;;;;;;Licence;7.0;Sciences;65.8;56.5
+ETU-073;;;;;;Master;7.0;Langues;73.9;72.4
+ETU-074;;;;;;Doctorat;12.0;Sciences;87.0;73.3
+ETU-075;;;;;;Licence;24.0;Sciences;88.4;88.4
+ETU-076;;;;;;Formation Pro;10.0;Langues;82.5;73.3
+ETU-077;;;;;;Master;24.0;Technique;62.6;53.6
+ETU-078;;;;;;Formation Pro;17.0;Management;87.7;78.9
+ETU-079;;;;;;Master;16.0;Management;63.9;55.7
+ETU-080;;;;;;Doctorat;17.0;Langues;77.9;67.5
+ETU-081;;;;;;Formation Pro;16.0;Technique;81.3;81.5
+ETU-082;;;;;;Doctorat;19.0;Sciences;87.4;74.8
+ETU-083;;;;;;Formation Pro;18.0;Technique;80.9;63.8
+ETU-084;;;;;;Master;2.0;Technique;68.6;62.0
+ETU-085;;;;;;Licence;7.0;Management;91.7;79.8
+ETU-086;;;;;;Licence;12.0;Langues;95.0;87.3
+ETU-087;;;;;;Master;17.0;Management;76.7;76.1
+ETU-088;;;;;;Master;19.0;Arts;88.2;74.4
+ETU-089;;;;;;Licence;6.0;Management;70.0;56.3
+ETU-090;;;;;;Formation Pro;7.0;Arts;86.2;84.1
+ETU-091;;;;;;Licence;19.0;Langues;63.7;60.9
+ETU-092;;;;;;Master;5.0;Sciences;83.8;71.0
+ETU-093;;;;;;Doctorat;13.0;Sciences;95.0;89.8
+ETU-094;;;;;;Licence;20.0;Arts;95.0;80.6
+ETU-095;;;;;;Doctorat;17.0;Langues;84.6;73.8
+ETU-096;;;;;;Doctorat;13.0;Langues;86.2;72.9
+ETU-097;;;;;;Licence;6.0;Arts;71.6;60.1
+ETU-098;;;;;;Master;11.0;Langues;75.8;74.9
+ETU-099;;;;;;Doctorat;7.0;Management;72.4;59.2
+ETU-100;;;;;;Doctorat;18.0;Management;90.0;76.9
+ETU-101;;;;;;Formation Pro;23.0;Technique;88.7;81.9
+ETU-102;;;;;;Doctorat;16.0;Arts;71.7;78.0
+ETU-103;;;;;;Doctorat;8.0;Sciences;73.8;58.6
+ETU-104;;;;;;Formation Pro;12.0;Arts;84.8;76.6
+ETU-105;;;;;;Doctorat;2.0;Arts;54.7;55.0
+ETU-106;;;;;;Licence;12.0;Technique;95.0;87.3
+ETU-107;;;;;;Formation Pro;20.0;Sciences;83.9;77.1
+ETU-108;;;;;;Formation Pro;9.0;Sciences;82.9;67.2
+ETU-109;;;;;;Formation Pro;20.0;Arts;64.8;61.8
+ETU-110;;;;;;Licence;11.0;Management;95.0;83.7
+ETU-111;;;;;;Master;24.0;Sciences;87.6;86.6
+ETU-112;;;;;;Master;11.0;Langues;72.9;64.2
+ETU-113;;;;;;Formation Pro;6.0;Sciences;79.8;72.3
+ETU-114;;;;;;Master;13.0;Arts;95.0;86.0
+ETU-115;;;;;;Master;15.0;Technique;95.0;87.8
+ETU-116;;;;;;Doctorat;7.0;Langues;61.4;54.3
+ETU-117;;;;;;Doctorat;21.0;Management;73.7;62.8
+ETU-118;;;;;;Formation Pro;11.0;Arts;95.0;74.6
+ETU-119;;;;;;Master;8.0;Arts;77.3;72.9

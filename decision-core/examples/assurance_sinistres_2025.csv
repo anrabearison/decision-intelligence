@@ -1,16 +1,130 @@
 Contrat_ID;Type_Couverture;Age_Conducteur;Puissance_Vehicule_CV;Prime_Annuelle_Euros;Nombre_Sinistres;Cout_Indemnisation_Euros
-ASS-01;Tiers;21;90;750;1;2400
-ASS-02;TousRisques;45;110;950;0;0
-ASS-03;TousRisques;58;130;1100;0;0
-ASS-04;Tiers;19;75;850;2;8500
-ASS-05;TousRisques;34;150;1300;0;0
-ASS-06;Tiers;62;90;600;0;0
-ASS-07;TousRisques;23;140;1600;1;14200
-ASS-08;TousRisques;50;115;980;0;0
-ASS-09;Tiers;29;85;680;0;0
-ASS-10;TousRisques;41;160;1450;1;3800
-ASS-11;Tiers;72;80;550;0;0
-ASS-12;TousRisques;25;120;1250;0;0
-ASS-13;Tiers;38;95;710;0;0
-ASS-14;TousRisques;52;180;1750;1;22000
-ASS-15;Tiers;31;85;660;0;0
+ASS-01;Tiers;21;90;750.0;1;2400.0
+ASS-02;TousRisques;45;110;950.0;0;0.0
+ASS-03;TousRisques;58;130;1100.0;0;0.0
+ASS-04;Tiers;19;75;850.0;2;8500.0
+ASS-05;TousRisques;34;150;1300.0;0;0.0
+ASS-06;Tiers;62;90;600.0;0;0.0
+ASS-07;TousRisques;23;140;1600.0;1;14200.0
+ASS-08;TousRisques;50;115;980.0;0;0.0
+ASS-09;Tiers;29;85;680.0;0;0.0
+ASS-10;TousRisques;41;160;1450.0;1;3800.0
+ASS-11;Tiers;72;80;550.0;0;0.0
+ASS-12;TousRisques;25;120;1250.0;0;0.0
+ASS-13;Tiers;38;95;710.0;0;0.0
+ASS-14;TousRisques;52;180;1750.0;1;22000.0
+ASS-15;Tiers;31;85;660.0;0;0.0
+CTR-016;Tiers;34;142;499.0;0;0.0
+CTR-017;Tiers étendu;72;128;603.0;0;0.0
+CTR-018;Tiers étendu;39;129;682.0;0;0.0
+CTR-019;Intermédiaire;22;135;925.0;1;430.0
+CTR-020;Tiers étendu;45;194;1011.0;1;1550.0
+CTR-021;Intermédiaire;60;148;971.0;0;0.0
+CTR-022;Tiers;43;182;630.0;0;0.0
+CTR-023;Intermédiaire;29;139;969.0;0;0.0
+CTR-024;Tiers étendu;38;97;567.0;0;0.0
+CTR-025;Tiers étendu;67;73;412.0;0;0.0
+CTR-026;Tiers;28;153;537.0;0;0.0
+CTR-027;Tiers étendu;51;148;776.0;0;0.0
+CTR-028;Tiers;53;166;536.0;0;0.0
+CTR-029;Tiers étendu;71;186;845.0;0;0.0
+CTR-030;Intermédiaire;25;50;455.0;1;1827.0
+CTR-031;Tiers;24;85;357.0;0;0.0
+CTR-032;Tiers;60;162;497.0;1;219.0
+CTR-033;Intermédiaire;73;193;1189.0;1;1113.0
+CTR-034;Tiers;66;64;246.0;0;0.0
+CTR-035;Tiers;47;147;531.0;0;0.0
+CTR-036;Intermédiaire;32;52;412.0;0;0.0
+CTR-037;Tiers;44;100;398.0;0;0.0
+CTR-038;Intermédiaire;39;73;579.0;0;0.0
+CTR-039;Intermédiaire;78;161;948.0;1;1906.0
+CTR-040;Tiers étendu;66;163;816.0;0;0.0
+CTR-041;Tiers;34;166;538.0;0;0.0
+CTR-042;Tous risques;74;81;714.0;1;615.0
+CTR-043;Tiers;71;141;440.0;0;0.0
+CTR-044;Tous risques;37;67;707.0;0;0.0
+CTR-045;Tiers étendu;67;68;337.0;1;322.0
+CTR-046;Tiers étendu;54;80;403.0;0;0.0
+CTR-047;Tiers;24;192;690.0;1;698.0
+CTR-048;Tiers étendu;66;158;731.0;0;0.0
+CTR-049;Intermédiaire;20;165;1015.0;0;0.0
+CTR-050;Tiers;73;92;315.0;0;0.0
+CTR-051;Tiers étendu;70;168;770.0;0;0.0
+CTR-052;Tiers;52;73;257.0;0;0.0
+CTR-053;Tiers;38;101;345.0;0;0.0
+CTR-054;Tiers étendu;43;134;660.0;0;0.0
+CTR-055;Tiers;65;172;561.0;0;0.0
+CTR-056;Tous risques;18;195;1810.0;1;2273.0
+CTR-057;Tiers étendu;66;151;758.0;0;0.0
+CTR-058;Tous risques;33;190;1782.0;2;2319.0
+CTR-059;Tous risques;76;117;932.0;0;0.0
+CTR-060;Tiers;47;146;517.0;0;0.0
+CTR-061;Intermédiaire;40;89;673.0;0;0.0
+CTR-062;Intermédiaire;46;110;785.0;0;0.0
+CTR-063;Intermédiaire;45;185;1100.0;0;0.0
+CTR-064;Intermédiaire;69;91;549.0;0;0.0
+CTR-065;Tiers;35;70;302.0;1;860.0
+CTR-066;Tous risques;30;197;1644.0;0;0.0
+CTR-067;Tiers;48;50;220.0;0;0.0
+CTR-068;Tiers;79;168;514.0;0;0.0
+CTR-069;Tous risques;46;166;1331.0;0;0.0
+CTR-070;Intermédiaire;78;73;417.0;0;0.0
+CTR-071;Intermédiaire;69;121;785.0;0;0.0
+CTR-072;Tous risques;40;180;1468.0;0;0.0
+CTR-073;Tous risques;77;156;1298.0;0;0.0
+CTR-074;Tous risques;29;53;631.0;0;0.0
+CTR-075;Intermédiaire;33;140;873.0;0;0.0
+CTR-076;Tiers étendu;38;91;481.0;0;0.0
+CTR-077;Tiers étendu;24;66;476.0;0;0.0
+CTR-078;Tiers étendu;63;190;921.0;0;0.0
+CTR-079;Tiers étendu;68;188;944.0;0;0.0
+CTR-080;Tiers étendu;40;95;498.0;0;0.0
+CTR-081;Intermédiaire;56;65;416.0;0;0.0
+CTR-082;Tous risques;39;192;1775.0;0;0.0
+CTR-083;Tous risques;38;86;750.0;0;0.0
+CTR-084;Tiers étendu;62;156;813.0;0;0.0
+CTR-085;Tiers;55;158;502.0;1;852.0
+CTR-086;Tiers;55;89;326.0;0;0.0
+CTR-087;Tous risques;77;76;641.0;0;0.0
+CTR-088;Tous risques;22;98;923.0;0;0.0
+CTR-089;Intermédiaire;69;86;570.0;1;366.0
+CTR-090;Tiers;55;142;447.0;0;0.0
+CTR-091;Tous risques;28;111;986.0;0;0.0
+CTR-092;Tiers étendu;35;173;819.0;0;0.0
+CTR-093;Tous risques;55;136;1194.0;0;0.0
+CTR-094;Intermédiaire;70;70;430.0;0;0.0
+CTR-095;Intermédiaire;67;193;1045.0;1;841.0
+CTR-096;Tiers;29;131;515.0;0;0.0
+CTR-097;Intermédiaire;69;68;469.0;0;0.0
+CTR-098;Tiers étendu;32;83;514.0;0;0.0
+CTR-099;Tous risques;51;118;1121.0;0;0.0
+CTR-100;Tiers étendu;34;147;841.0;0;0.0
+CTR-101;Tiers étendu;53;184;923.0;0;0.0
+CTR-102;Tiers;51;120;418.0;0;0.0
+CTR-103;Tiers;46;53;205.0;0;0.0
+CTR-104;Tiers étendu;77;95;436.0;0;0.0
+CTR-105;Intermédiaire;60;195;1151.0;0;0.0
+CTR-106;Tiers étendu;24;166;949.0;0;0.0
+CTR-107;Tous risques;37;115;1056.0;0;0.0
+CTR-108;Tiers;73;182;536.0;0;0.0
+CTR-109;Tiers;46;168;603.0;0;0.0
+CTR-110;Tiers étendu;53;118;617.0;0;0.0
+CTR-111;Tiers;49;57;249.0;0;0.0
+CTR-112;Tiers étendu;46;123;635.0;1;356.0
+CTR-113;Tiers étendu;31;84;499.0;0;0.0
+CTR-114;Tiers;70;59;207.0;0;0.0
+CTR-115;Tous risques;65;73;667.0;0;0.0
+CTR-116;Intermédiaire;45;50;393.0;0;0.0
+CTR-117;Tiers;34;108;364.0;0;0.0
+CTR-118;Intermédiaire;45;128;767.0;0;0.0
+CTR-119;Tous risques;22;182;1571.0;0;0.0
+CTR-120;Tiers;66;98;313.0;0;0.0
+CTR-121;Tiers;30;138;513.0;0;0.0
+CTR-122;Tous risques;21;177;1510.0;1;2779.0
+CTR-123;Tous risques;64;185;1404.0;0;0.0
+CTR-124;Tiers;52;162;511.0;1;180.0
+CTR-125;Tous risques;75;141;1100.0;0;0.0
+CTR-126;Tiers;68;195;617.0;0;0.0
+CTR-127;Tous risques;56;140;1072.0;0;0.0
+CTR-128;Tous risques;41;161;1462.0;0;0.0
+CTR-129;Tiers étendu;72;78;369.0;0;0.0

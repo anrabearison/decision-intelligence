@@ -1,16 +1,100 @@
-Incident_ID;Criticite;Nb_Systemes_Touches;Heures_Detection;Heures_Resolution;Employes_Affectes;Cout_Incident_Euros
-INC-001;Faible;1;0,5;2;5;800
-INC-002;Faible;2;1,0;4;12;1500
-INC-003;Moyen;5;3,5;18;45;12000
-INC-004;Faible;1;0,3;1;3;500
-INC-005;Critique;25;0,2;72;350;280000
-INC-006;Moyen;8;6,0;24;80;18000
-INC-007;Faible;1;0,8;3;8;900
-INC-008;Critique;40;0,1;120;600;950000
-INC-009;Moyen;6;4,0;20;55;15000
-INC-010;Faible;2;1,2;5;15;2000
-INC-011;Critique;18;0,3;96;280;420000
-INC-012;Moyen;10;8,0;30;100;22000
-INC-013;Faible;1;0,5;2;6;700
-INC-014;Moyen;7;5,0;22;70;16500
-INC-015;Critique;35;0,2;110;500;780000
+Incident_ID;Criticite;Nb_Systemes_Touches;Heures_Detection;Heures_Resolution;Employes_Affectes;Cout_Incident_Euros;Type_Attaque;Secteur;Nombre_Utilisateurs;Cout_Direct_Euros;Temps_Resolution_Heures;Impact_Reputation_Note
+INC-001;Faible;1.0;0,5;2.0;5.0;800.0;;;;;;
+INC-002;Faible;2.0;1,0;4.0;12.0;1500.0;;;;;;
+INC-003;Moyen;5.0;3,5;18.0;45.0;12000.0;;;;;;
+INC-004;Faible;1.0;0,3;1.0;3.0;500.0;;;;;;
+INC-005;Critique;25.0;0,2;72.0;350.0;280000.0;;;;;;
+INC-006;Moyen;8.0;6,0;24.0;80.0;18000.0;;;;;;
+INC-007;Faible;1.0;0,8;3.0;8.0;900.0;;;;;;
+INC-008;Critique;40.0;0,1;120.0;600.0;950000.0;;;;;;
+INC-009;Moyen;6.0;4,0;20.0;55.0;15000.0;;;;;;
+INC-010;Faible;2.0;1,2;5.0;15.0;2000.0;;;;;;
+INC-011;Critique;18.0;0,3;96.0;280.0;420000.0;;;;;;
+INC-012;Moyen;10.0;8,0;30.0;100.0;22000.0;;;;;;
+INC-013;Faible;1.0;0,5;2.0;6.0;700.0;;;;;;
+INC-014;Moyen;7.0;5,0;22.0;70.0;16500.0;;;;;;
+INC-015;Critique;35.0;0,2;110.0;500.0;780000.0;;;;;;
+INC-016;;;;;;;Injection SQL;Santé;603.0;10168.0;36.0;4.3
+INC-017;;;;;;;Malware;Finance;4844.0;41701.0;35.0;7.0
+INC-018;;;;;;;Phishing;Retail;4035.0;5209.0;11.0;1.5
+INC-019;;;;;;;Phishing;Gouvernement;703.0;2640.0;19.0;4.3
+INC-020;;;;;;;Malware;Finance;4605.0;39498.0;45.0;7.2
+INC-021;;;;;;;Malware;Gouvernement;259.0;2262.0;34.0;4.4
+INC-022;;;;;;;DDoS;Retail;4311.0;41100.0;47.0;6.9
+INC-023;;;;;;;Injection SQL;Finance;4162.0;222795.0;39.0;10.0
+INC-024;;;;;;;DDoS;Retail;635.0;4980.0;64.0;8.4
+INC-025;;;;;;;Injection SQL;Santé;3112.0;86611.0;25.0;9.4
+INC-026;;;;;;;Phishing;Finance;633.0;3770.0;8.0;4.4
+INC-027;;;;;;;DDoS;Finance;4768.0;54445.0;38.0;7.4
+INC-028;;;;;;;DDoS;Éducation;4076.0;32336.0;60.0;10.0
+INC-029;;;;;;;Injection SQL;Finance;1204.0;52798.0;25.0;8.9
+INC-030;;;;;;;Ransomware;Finance;2277.0;357378.0;238.0;10.0
+INC-031;;;;;;;Phishing;Finance;4723.0;29212.0;6.0;8.4
+INC-032;;;;;;;Phishing;Retail;3494.0;13529.0;19.0;5.2
+INC-033;;;;;;;Ransomware;Santé;3826.0;232409.0;198.0;10.0
+INC-034;;;;;;;Malware;Retail;2528.0;12731.0;36.0;7.3
+INC-035;;;;;;;Injection SQL;Santé;600.0;21035.0;65.0;8.0
+INC-036;;;;;;;Malware;Finance;3436.0;23360.0;24.0;5.8
+INC-037;;;;;;;Phishing;Gouvernement;4801.0;17631.0;10.0;8.5
+INC-038;;;;;;;Malware;Gouvernement;1533.0;15677.0;43.0;4.5
+INC-039;;;;;;;DDoS;Éducation;4415.0;20888.0;58.0;10.0
+INC-040;;;;;;;Injection SQL;Éducation;1628.0;13269.0;24.0;4.1
+INC-041;;;;;;;Malware;Gouvernement;1208.0;17569.0;18.0;4.3
+INC-042;;;;;;;Malware;Retail;4850.0;16628.0;36.0;8.0
+INC-043;;;;;;;Injection SQL;Gouvernement;3450.0;125151.0;49.0;10.0
+INC-044;;;;;;;Phishing;Finance;179.0;755.0;24.0;5.8
+INC-045;;;;;;;Phishing;Santé;2765.0;5999.0;7.0;4.1
+INC-046;;;;;;;Phishing;Santé;1406.0;7469.0;16.0;7.8
+INC-047;;;;;;;DDoS;Gouvernement;2146.0;32068.0;28.0;10.0
+INC-048;;;;;;;Injection SQL;Santé;4339.0;109541.0;67.0;10.0
+INC-049;;;;;;;Injection SQL;Gouvernement;131.0;4923.0;38.0;7.1
+INC-050;;;;;;;Malware;Gouvernement;1737.0;24941.0;47.0;9.7
+INC-051;;;;;;;Malware;Gouvernement;2122.0;29339.0;27.0;8.9
+INC-052;;;;;;;Ransomware;Éducation;4761.0;290131.0;239.0;10.0
+INC-053;;;;;;;Phishing;Santé;1731.0;9152.0;23.0;7.4
+INC-054;;;;;;;Injection SQL;Santé;2928.0;83852.0;39.0;10.0
+INC-055;;;;;;;Malware;Finance;864.0;14342.0;22.0;2.8
+INC-056;;;;;;;Ransomware;Éducation;1571.0;66394.0;121.0;10.0
+INC-057;;;;;;;Malware;Retail;273.0;2921.0;42.0;7.0
+INC-058;;;;;;;Malware;Éducation;4501.0;32605.0;21.0;6.9
+INC-059;;;;;;;Malware;Éducation;3746.0;10713.0;13.0;4.9
+INC-060;;;;;;;Malware;Gouvernement;1758.0;20318.0;45.0;6.7
+INC-061;;;;;;;Phishing;Finance;3945.0;21169.0;15.0;8.6
+INC-062;;;;;;;Phishing;Éducation;3327.0;5120.0;22.0;8.6
+INC-063;;;;;;;DDoS;Santé;3685.0;94024.0;68.0;10.0
+INC-064;;;;;;;Injection SQL;Retail;2349.0;78779.0;59.0;10.0
+INC-065;;;;;;;Phishing;Finance;1139.0;6294.0;6.0;6.2
+INC-066;;;;;;;Malware;Retail;341.0;1529.0;23.0;1.0
+INC-067;;;;;;;Ransomware;Gouvernement;1948.0;126054.0;234.0;10.0
+INC-068;;;;;;;Malware;Éducation;4216.0;20260.0;14.0;9.6
+INC-069;;;;;;;Malware;Éducation;1813.0;11242.0;32.0;7.5
+INC-070;;;;;;;Phishing;Santé;2711.0;10440.0;12.0;4.3
+INC-071;;;;;;;DDoS;Éducation;1732.0;11449.0;82.0;9.7
+INC-072;;;;;;;Ransomware;Retail;4569.0;225010.0;225.0;10.0
+INC-073;;;;;;;Injection SQL;Santé;3461.0;115595.0;18.0;10.0
+INC-074;;;;;;;Injection SQL;Gouvernement;230.0;6769.0;40.0;6.5
+INC-075;;;;;;;Ransomware;Santé;3317.0;424361.0;102.0;10.0
+INC-076;;;;;;;Phishing;Éducation;981.0;2389.0;15.0;5.2
+INC-077;;;;;;;Injection SQL;Finance;1011.0;52127.0;64.0;10.0
+INC-078;;;;;;;Ransomware;Gouvernement;2958.0;209771.0;94.0;10.0
+INC-079;;;;;;;DDoS;Retail;1631.0;9788.0;72.0;6.6
+INC-080;;;;;;;Ransomware;Éducation;4257.0;255009.0;170.0;10.0
+INC-081;;;;;;;DDoS;Santé;4877.0;105065.0;67.0;10.0
+INC-082;;;;;;;Phishing;Retail;854.0;2695.0;17.0;2.3
+INC-083;;;;;;;Injection SQL;Gouvernement;2289.0;87886.0;30.0;9.9
+INC-084;;;;;;;DDoS;Finance;1544.0;15158.0;31.0;6.2
+INC-085;;;;;;;DDoS;Gouvernement;228.0;4790.0;57.0;2.5
+INC-086;;;;;;;Injection SQL;Santé;4697.0;101155.0;38.0;10.0
+INC-087;;;;;;;Injection SQL;Santé;3340.0;144930.0;72.0;10.0
+INC-088;;;;;;;DDoS;Éducation;1341.0;13259.0;80.0;7.2
+INC-089;;;;;;;Injection SQL;Retail;1233.0;15487.0;45.0;4.7
+INC-090;;;;;;;DDoS;Gouvernement;900.0;12226.0;49.0;5.8
+INC-091;;;;;;;Ransomware;Gouvernement;1572.0;77952.0;182.0;10.0
+INC-092;;;;;;;Injection SQL;Retail;671.0;21897.0;52.0;8.9
+INC-093;;;;;;;Injection SQL;Santé;399.0;14195.0;68.0;8.1
+INC-094;;;;;;;Injection SQL;Gouvernement;2498.0;91931.0;31.0;10.0
+INC-095;;;;;;;Injection SQL;Éducation;2159.0;23681.0;65.0;8.1
+INC-096;;;;;;;Ransomware;Gouvernement;89.0;7901.0;104.0;8.0
+INC-097;;;;;;;Malware;Gouvernement;173.0;2557.0;45.0;5.3
+INC-098;;;;;;;Phishing;Éducation;1015.0;1823.0;14.0;1.4
+INC-099;;;;;;;Malware;Santé;4287.0;69115.0;38.0;9.7
