@@ -27,6 +27,7 @@ from decision_core.reporting.warnings import (
     _build_nonlinearity_warnings,
     _build_asymmetry_warnings,
 )
+from decision_core.reporting.warnings.seasonality import _detect_temporal_columns
 from decision_core.reporting.scoring import SMALL_SAMPLE_THRESHOLD
 from decision_core.reporting.context import ReportBuildContext
 
@@ -300,8 +301,6 @@ def _populate_significant_subgroups(ctx: ReportBuildContext) -> None:
     )[:5]
     
     # P1-8 : saisonnalité mieux nommée — si colonne temporelle, dire effet saisonnier
-    from decision_core.reporting.warnings.seasonality import _detect_temporal_columns
-
     temporal_cols = set(_detect_temporal_columns(ctx.df))
 
     for subgroup in ctx.significant_subgroups:
@@ -329,7 +328,7 @@ def _populate_significant_subgroups(ctx: ReportBuildContext) -> None:
             cols = ", ".join(ctx.anomalies.keys())
             ctx.warnings.append(
                 f"Ces valeurs atypiques ({cols}) semblent liées à '{top}' : "
-                f"elles peuvent représenter un segment métier à analyser séparément plutôt que des erreurs à corriger."
+                f"segment métier probable — analysez séparément plutôt que comme erreurs."
             )
 
 

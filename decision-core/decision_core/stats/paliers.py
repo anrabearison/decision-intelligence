@@ -18,7 +18,7 @@ import numpy as np
 
 def is_discrete_paliers_feature(
     series: pd.Series,
-    max_unique: int = 25,
+    max_unique: int = 15,
     intra_ratio_threshold: float = 0.40,
 ) -> tuple[bool, str | None]:
     """
@@ -79,7 +79,7 @@ def detect_paliers_for_simulation(
     df: pd.DataFrame,
     feature: str,
     target: str | None = None,
-    max_unique: int = 25,
+    max_unique: int = 15,
 ) -> tuple[bool, str | None]:
     """
     Wrapper pour simulation : teste la feature, et si target fourni, vérifie aussi
