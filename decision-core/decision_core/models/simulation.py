@@ -8,6 +8,7 @@ from typing import Any
 @dataclass(frozen=True)
 class SimulationResult:
     """Encapsule le résultat d'une simulation d'impact."""
+
     baseline: float
     simulated: float
     change_pct: float | None
@@ -19,6 +20,8 @@ class SimulationResult:
     change_percentage_points: float | None = None
     model_type: str | None = None
     bounds_applied: bool | None = None
+    actionable: bool = True
+    non_actionable_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v is not None}

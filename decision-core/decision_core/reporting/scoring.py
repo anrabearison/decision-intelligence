@@ -72,9 +72,14 @@ def _compute_exploitability_score(
     # Pénalité anomalies détectées
     score -= n_anomaly_cols * 5
 
-    # Pénalité R² faible sur la simulation
+    # Pénalité R² faible sur la simulation — P0 scoring lié à la simulation
+    # Si R² quasi nul, la simulation n'est pas exploitable : cap orange et bandeau
     if r_squared is not None:
-        if r_squared < 0.1:
+        if r_squared < 0.01:
+            score -= 50
+        elif r_squared < 0.05:
+            score -= 40
+        elif r_squared < 0.1:
             score -= 30
         elif r_squared < LOW_R_SQUARED_THRESHOLD:
             score -= 15

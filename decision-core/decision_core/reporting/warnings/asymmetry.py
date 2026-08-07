@@ -71,9 +71,9 @@ def _build_asymmetry_warnings(
 
         warning = (
             f"{subject} : la moyenne ({mean_str}) "
-            f"est très éloignée de la médiane ({median_str}) à cause de valeurs "
-            f"extrêmes (ratio asymétrie = {asymmetry_ratio:.2f}). "
-            f"{interpretation}"
+            f"est très éloignée de la médiane ({median_str}) — quelques gros cas tirent la moyenne "
+            f"(ratio asymétrie = {asymmetry_ratio:.2f}, explique {asymmetry_ratio*100:.0f}% des écarts). "
+            f"{interpretation} (détail : eta² asymétrie)"
         )
 
         warnings.append(warning)

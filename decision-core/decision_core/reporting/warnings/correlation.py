@@ -46,10 +46,7 @@ def _build_correlation_warnings(
     if n_tested >= 6 and n_significant < n_tested:
         warnings.append(
             f"Comparaisons multiples : sur {n_tested} paires de variables "
-            f"testées, seulement {n_significant} restent statistiquement "
-            f"significatives après correction (Benjamini-Hochberg, seuil "
-            f"5%). Plus il y a de colonnes, plus une corrélation isolée "
-            f"forte peut apparaître par hasard - se fier au champ "
-            f"'significant_after_correction' de chaque paire plutôt qu'à "
-            f"sa seule valeur."
+            f"testées, seulement {n_significant} restent significatives après correction "
+            f"(détail : Benjamini-Hochberg, seuil 5%). Plus il y a de colonnes, plus une corrélation "
+            f"isolée peut apparaître par hasard — vérifiez 'significant_after_correction'."
         )

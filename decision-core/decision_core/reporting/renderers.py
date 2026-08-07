@@ -18,6 +18,10 @@ def render_text_summary(report: ReportResult) -> str:
     ds = report.dataset_summary
     lines.append(f"📊 Résumé du dataset : {ds.n_rows} lignes, {ds.n_columns} colonnes.")
 
+    # P1-5 : insight principal en tête
+    if getattr(report, "main_insight", None):
+        lines.append(f"💡 Conclusion principale : {report.main_insight}")
+
     # Disclaimer systématique sur la causalité
     lines.append("⚠️ AVERTISSEMENT : Corrélation ≠ Causalité. Les résultats présentés "
                  "ne doivent pas être interprétés comme des relations de cause à effet.")
@@ -34,26 +38,32 @@ def render_text_summary(report: ReportResult) -> str:
 
     if report.simulation is not None:
         sim = report.simulation
+        # P0-2 : indiquer si simulation non actionnable
+        actionable_suffix = ""
+        if sim.get("actionable") is False:
+            actionable_suffix = " — calcul indicatif uniquement, non actionnable"
         if sim.get("change_percentage_points") is not None:
             lines.append(
                 f"💡 Simulation sur '{sim['feature']}' : "
                 f"{sim['baseline']:.1%} → {sim['simulated']:.1%} "
-                f"({sim['change_percentage_points']:+.1f} points)."
+                f"({sim['change_percentage_points']:+.1f} points){actionable_suffix}."
             )
         elif sim.get("change_pct_reliable", True):
             lines.append(
                 f"💡 Simulation sur '{sim['feature']}' : "
                 f"{sim['baseline']:.1f} → {sim['simulated']:.1f} "
-                f"({sim['change_pct']:+.1f}%)."
+                f"({sim['change_pct']:+.1f}%){actionable_suffix}."
             )
         else:
             lines.append(
                 f"💡 Simulation sur '{sim['feature']}' : "
-                f"{sim['baseline']:.2f} → {sim['simulated']:.2f}. "
+                f"{sim['baseline']:.2f} → {sim['simulated']:.2f}{actionable_suffix}. "
                 f"Variation en % non fiable ici (valeur de référence trop "
                 f"proche de zéro) - se fier aux valeurs absolues plutôt "
                 f"qu'au pourcentage."
             )
+        if sim.get("actionable") is False and sim.get("non_actionable_reason"):
+            lines.append(f"⚠️ {sim['non_actionable_reason']}")
 
     for w in report.warnings:
         lines.append(f"⚠️ {w}")

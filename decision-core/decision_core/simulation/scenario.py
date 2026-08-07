@@ -105,6 +105,30 @@ def simulate_scenario(
     change_absolute = simulated - baseline
     change_percentage_points = change_absolute * 100 if is_probability_model else None
 
+    # P0-2 : actionable flag — R² quasi nul ou paliers métier rendent la simulation non actionnable
+    actionable = True
+    non_actionable_reason = None
+    if model.r_squared < 0.01:
+        actionable = False
+        non_actionable_reason = (
+            f"R² très faible ({model.r_squared:.3f}) : la feature '{feature}' n'explique "
+            f"quasiment pas la variance de '{target}'. La simulation globale n'est pas exploitable."
+        )
+    else:
+        # Détection paliers métier sur la feature
+        try:
+            from decision_core.stats.paliers import detect_paliers_for_simulation
+
+            is_paliers, _ = detect_paliers_for_simulation(df, feature, target)
+            if is_paliers:
+                actionable = False
+                non_actionable_reason = (
+                    f"La variable '{feature}' semble fonctionner par paliers/seuils métier. "
+                    f"Une simulation continue en pourcentage est trompeuse — préférez une simulation par passage de tranche."
+                )
+        except Exception:
+            pass
+
     return SimulationResult(
         baseline=float(baseline),
         simulated=float(simulated),
@@ -119,4 +143,6 @@ def simulate_scenario(
         ),
         model_type=model_type,
         bounds_applied=bounds_applied,
+        actionable=actionable,
+        non_actionable_reason=non_actionable_reason,
     )

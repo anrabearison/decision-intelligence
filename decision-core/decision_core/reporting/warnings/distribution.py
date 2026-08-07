@@ -67,33 +67,32 @@ def _build_distribution_warnings(
         if count_result is not None and zero_result is not None:
             warnings.append(
                 f"Distribution de comptage avec forte proportion de zéros détectée pour '{count_result.feature}' : "
-                f"valeurs discrètes et peu nombreuses ({count_result.unique_values} valeurs distinctes), "
+                f"beaucoup de valeurs à zéro ({count_result.unique_values} valeurs distinctes), "
                 f"{zero_result.zero_ratio:.0%} des observations sont nulles. "
-                f"Une régression gaussienne standard peut sous-estimer ces données ; "
-                f"un modèle de comptage zero-inflated ou hurdle est souvent plus adapté."
+                f"La moyenne est trompeuse : cette variable fonctionne souvent en mode 'pas de valeur', "
+                f"puis parfois avec une valeur — un modèle de comptage est plus adapté (détail : zero-inflated/hurdle, beaucoup de valeurs à zéro)."
             )
         elif count_result is not None:
             warnings.append(
                 f"Distribution de comptage détectée pour '{count_result.feature}' : "
-                f"valeurs discrètes et peu nombreuses ({count_result.unique_values} valeurs distinctes, "
+                f"beaucoup de valeurs à zéro ({count_result.unique_values} valeurs distinctes, "
                 f"moyenne = {count_result.mean:.2f}, variance = {count_result.variance:.2f}). "
-                f"Une régression linéaire normale peut sous-estimer ce type de données ; "
-                f"un modèle de comptage (Poisson, quasi-Poisson) est souvent plus adapté."
+                f"La moyenne est trompeuse : beaucoup de zéros — un modèle de comptage (Poisson) est souvent plus adapté."
             )
         elif zero_result is not None:
             warnings.append(
                 f"Distribution zéro-inflated détectée pour '{zero_result.feature}' : "
-                f"{zero_result.zero_ratio:.0%} des observations sont nulles, ce qui crée une masse importante à zéro. "
-                f"La variance n'est pas bien capturée par un modèle gaussien standard ; "
-                f"une approche à deux phases (zero-inflated ou hurdle model) peut mieux décrire ces données."
+                f"beaucoup de valeurs à zéro — {zero_result.zero_ratio:.0%} des observations sont nulles. "
+                f"La moyenne est trompeuse : beaucoup de zéros tirent la distribution — "
+                f"une approche à deux phases est plus adaptée."
             )
 
         if heavy_result is not None:
             warnings.append(
                 f"Distribution à queue lourde détectée pour '{heavy_result.feature}' : "
-                f"forte asymétrie (skew = {heavy_result.skewness:.2f}, kurtosis = {heavy_result.kurtosis:.2f}) et "
-                f"valeurs extrêmes influent fortement sur la moyenne. "
-                f"Un modèle normal standard peut sous-estimer le risque des très grandes valeurs."
+                f"quelques gros cas tirent fortement la moyenne (skew = {heavy_result.skewness:.2f}, kurtosis = {heavy_result.kurtosis:.2f}) et "
+                f"valeurs extrêmes. "
+                f"La moyenne surestime le cas typique — un modèle normal sous-estime le risque des très grandes valeurs."
             )
 
     return set(detected_columns)

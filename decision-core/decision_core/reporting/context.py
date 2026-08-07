@@ -44,6 +44,9 @@ class ReportBuildContext:
     
     # Simulation
     simulation: dict[str, Any] | None = None
-    
+
+    # Insight principal
+    main_insight: str | None = None
+
     # Score d'exploitabilité
     exploitability: Any = None

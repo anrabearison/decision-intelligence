@@ -217,16 +217,32 @@ def _populate_anomalies(ctx: ReportBuildContext) -> None:
     )
     
     if ctx.anomalies:
-        cols_with_anomalies = ", ".join(ctx.anomalies.keys())
+        # P1-7 : IQR contextualisé — si sous-groupe fort explique la colonne, dire segment métier
+        cols_with_anomalies = list(ctx.anomalies.keys())
+        cols_str = ", ".join(cols_with_anomalies)
         total_anomalies = sum(len(a["indices"]) for a in ctx.anomalies.values())
-        ctx.warnings.append(
-            f"Anomalie(s) détectée(s) sur {len(ctx.anomalies)} colonne(s) "
-            f"({cols_with_anomalies}) : {total_anomalies} valeur(s) "
-            f"hors de la plage habituelle au total, potentiellement des "
-            f"erreurs de saisie ou des cas exceptionnels à vérifier - "
-            f"elles peuvent fortement fausser la moyenne et l'écart-type "
-            f"affichés."
-        )
+        # Vérifier si un sous-groupe fort existe déjà (sinon on le fera après, mais on tente)
+        subgroup_cols = []
+        try:
+            subgroup_cols = [s["column"] for s in ctx.significant_subgroups]
+        except Exception:
+            pass
+        if subgroup_cols:
+            top_sub = subgroup_cols[0]
+            ctx.warnings.append(
+                f"Anomalie(s) détectée(s) sur {len(ctx.anomalies)} colonne(s) "
+                f"({cols_str}) : {total_anomalies} valeur(s) "
+                f"hors de la plage habituelle. Valeurs atypiques — elles peuvent être des erreurs, "
+                f"ou représenter un segment métier à analyser séparément. "
+                f"Ces valeurs atypiques semblent liées à '{top_sub}' : segment métier probable."
+            )
+        else:
+            ctx.warnings.append(
+                f"Anomalie(s) détectée(s) sur {len(ctx.anomalies)} colonne(s) "
+                f"({cols_str}) : {total_anomalies} valeur(s) "
+                f"hors de la plage habituelle. Valeurs atypiques — elles peuvent être des erreurs de saisie, "
+                f"ou représenter un segment métier distinct — vérifiez avant de les corriger."
+            )
 
 
 def _populate_correlations(ctx: ReportBuildContext) -> None:
@@ -283,12 +299,38 @@ def _populate_significant_subgroups(ctx: ReportBuildContext) -> None:
         reverse=True,
     )[:5]
     
+    # P1-8 : saisonnalité mieux nommée — si colonne temporelle, dire effet saisonnier
+    from decision_core.reporting.warnings.seasonality import _detect_temporal_columns
+
+    temporal_cols = set(_detect_temporal_columns(ctx.df))
+
     for subgroup in ctx.significant_subgroups:
-        ctx.warnings.append(
-            f"Sous-groupe significatif détecté : '{subgroup['column']}' explique "
-            f"{subgroup['eta_squared']:.1%} de la variance de la cible. "
-            f"Considérez une analyse segmentée par cette variable pour des insights plus précis."
-        )
+        col = subgroup["column"]
+        eta = subgroup["eta_squared"]
+        if col in temporal_cols:
+            ctx.warnings.append(
+                f"Effet saisonnier/temporel fort détecté : '{col}' explique {eta:.0%} des écarts "
+                f"— bien plus qu'une simple segmentation. Comparer des périodes sans tenir compte de la saison "
+                f"peut fausser l'analyse. Analysez par période avant de conclure."
+            )
+        else:
+            ctx.warnings.append(
+                f"Sous-groupe significatif détecté : '{col}' explique "
+                f"{eta:.1%} de la variance de la cible (explique {eta:.0%} des écarts). "
+                f"Considérez une analyse segmentée par cette variable pour des insights plus précis."
+            )
+
+    # P1-7 (suite) : si anomalies existent et sous-groupe fort, contextualiser
+    if ctx.anomalies and ctx.significant_subgroups:
+        # On ne répète pas si le warning anomalies contenait déjà le sous-groupe
+        already_contextualized = any("segment métier" in w for w in ctx.warnings)
+        if not already_contextualized:
+            top = ctx.significant_subgroups[0]["column"]
+            cols = ", ".join(ctx.anomalies.keys())
+            ctx.warnings.append(
+                f"Ces valeurs atypiques ({cols}) semblent liées à '{top}' : "
+                f"elles peuvent représenter un segment métier à analyser séparément plutôt que des erreurs à corriger."
+            )
 
 
 def _populate_nonlinearity_and_asymmetry(ctx: ReportBuildContext) -> None:
@@ -327,9 +369,24 @@ def _populate_simulation(ctx: ReportBuildContext) -> None:
     """
     if ctx.typed_simulation is not None:
         ctx.simulation = _build_simulation_section(ctx.df, ctx.typed_simulation)
+        # P0-2 : bandeau simulation non exploitable si actionable=False
+        if ctx.simulation.get("actionable") is False:
+            ctx.warnings.append(
+                f"Simulation non exploitable : {ctx.simulation.get('non_actionable_reason','Raison non spécifiée')} "
+                f"Calcul indicatif uniquement — ne pas utiliser pour une décision."
+            )
         _build_simulation_warnings(
             ctx.df, ctx.typed_simulation, ctx.simulation, ctx.n_rows, ctx.warnings, ctx.nonlinearity_patterns
         )
+        # P0-4 : warning spécifique paliers métier même si R² n'est pas quasi nul
+        if ctx.simulation.get("actionable") is False and "paliers" in (ctx.simulation.get("non_actionable_reason") or ""):
+            # Déjà couvert par le bandeau, mais on ajoute un warning métier explicite si pas déjà présent
+            paliers_msg = (
+                f"La variable '{ctx.typed_simulation.feature}' semble fonctionner par paliers/seuils métier. "
+                f"Une simulation continue en pourcentage est trompeuse — préférez une simulation par passage de tranche."
+            )
+            if paliers_msg not in ctx.warnings:
+                ctx.warnings.append(paliers_msg)
 
 
 def _populate_seasonality_and_score(ctx: ReportBuildContext) -> None:
@@ -340,6 +397,63 @@ def _populate_seasonality_and_score(ctx: ReportBuildContext) -> None:
     """
     # R8 : Saisonnalité (avant R9 pour intégrer le warning au score)
     _build_seasonality_warnings(ctx.df, ctx.corr_pairs, ctx.warnings)
+
+    # P2-9 : Churn par segment — si cible binaire + colonnes catégorielles
+    try:
+        from decision_core.stats.regression import is_binary_target
+        from decision_core.stats.categorical import detect_significant_subgroups as _detect_sub
+
+        # Déterminer la cible (simulation ou première numérique binaire)
+        target_col = None
+        if ctx.typed_simulation is not None:
+            target_col = ctx.typed_simulation.target
+        else:
+            for col in ctx.df.columns:
+                try:
+                    if is_binary_target(ctx.df[col]):
+                        target_col = col
+                        break
+                except Exception:
+                    continue
+        if target_col is not None and target_col in ctx.df.columns and is_binary_target(ctx.df[target_col]):
+            cat_cols = [c for c in ctx.df.columns if c != target_col and ctx.df[c].dtype == object or str(ctx.df[c].dtype) == 'object' or pd.api.types.is_string_dtype(ctx.df[c])]
+            # limiter à 2 colonnes max pour éviter le spam
+            for cat in cat_cols[:2]:
+                if ctx.df[cat].nunique() <= 10 and ctx.df[cat].nunique() > 1:
+                    rates = ctx.df.groupby(cat)[target_col].mean().sort_values(ascending=False)
+                    if len(rates) >= 2:
+                        parts = ", ".join(f"{idx}: {val:.0%}" for idx, val in rates.items())
+                        ctx.warnings.append(
+                            f"Taux de '{target_col}' par segment '{cat}' : {parts}. "
+                            f"Cette segmentation peut révéler les segments à risque plus que la moyenne globale."
+                        )
+    except Exception:
+        pass
+
+    # P2-10 : Plafonds physiques — si simulation dépasse borne plausible
+    try:
+        sim = ctx.simulation or {}
+        if sim and sim.get("target"):
+            target = sim["target"]
+            simulated = sim.get("simulated")
+            # Détection heuristique : Note sur 20, pourcentage 0-100, proba 0-1
+            bounds = None
+            low_target = target.lower()
+            if "note" in low_target and "20" in low_target:
+                bounds = (0, 20)
+            elif "pourcent" in low_target or "pct" in low_target or "taux" in low_target:
+                bounds = (0, 100)
+            elif "proba" in low_target or target.lower() == "churn":
+                bounds = (0, 1)
+            if bounds and simulated is not None:
+                if not (bounds[0] <= simulated <= bounds[1]):
+                    ctx.warnings.append(
+                        f"Simulation hors borne plausible pour '{target}' : {simulated:.2f} "
+                        f"hors [{bounds[0]}, {bounds[1]}]. Le modèle linéaire dépasse une limite physique — "
+                        f"interprétez comme indicatif, pas comme valeur réalisable."
+                    )
+    except Exception:
+        pass
     
     # R9 : Score d'exploitabilité synthétique
     sim_r_squared = (ctx.simulation or {}).get("model_r_squared")
@@ -349,6 +463,82 @@ def _populate_seasonality_and_score(ctx: ReportBuildContext) -> None:
         n_anomaly_cols=len(ctx.anomalies),
         r_squared=sim_r_squared,
     )
+
+
+def _build_main_insight(ctx: ReportBuildContext) -> str | None:
+    """P1-5 : génère une phrase priorisée en tête de rapport.
+
+    Priorités déterministes :
+    1. simulation non exploitable
+    2. simulation par paliers
+    3. confounder fort
+    4. sous-groupe dominant
+    5. non-linéarité
+    6. asymétrie/distribution
+    7. saisonnalité
+    8. meilleure corrélation fiable
+    """
+    sim = ctx.simulation or {}
+    # 1. simulation non exploitable (R² quasi nul)
+    if sim.get("actionable") is False and sim.get("non_actionable_reason"):
+        reason = sim["non_actionable_reason"]
+        if "R²" in reason or "n'explique" in reason:
+            return (
+                f"Votre simulation globale n'est pas fiable : {reason} "
+                f"Envisagez une analyse segmentée avant de décider."
+            )
+        if "paliers" in reason:
+            return (
+                f"La variable '{sim.get('feature','?')}' semble fonctionner par paliers. "
+                f"Une simulation continue est trompeuse — préférez une analyse par tranche."
+            )
+
+    # 2. confounder fort (déjà dans warnings)
+    for w in ctx.warnings:
+        if "facteur(s) confondant(s)" in w or "spurieuse" in w:
+            # extraire les noms si possible
+            return w + " Vérifiez ce facteur avant d'interpréter la corrélation comme causale."
+
+    # 3. sous-groupe dominant
+    if ctx.significant_subgroups:
+        top = ctx.significant_subgroups[0]
+        eta = top.get("eta_squared", 0)
+        if eta >= 0.5:
+            sim_feat = (ctx.typed_simulation.feature if ctx.typed_simulation else None)
+            return (
+                f"La variable '{top['column']}' explique {eta:.0%} des écarts — bien plus que votre feature "
+                f"'{sim_feat or 'testée'}'. Analysez séparément par '{top['column']}' avant de simuler globalement."
+            )
+
+    # 4. non-linéarité
+    if ctx.nonlinearity_patterns:
+        p = ctx.nonlinearity_patterns[0]
+        return (
+            f"Relation non-linéaire détectée entre '{p.feature}' et '{p.target}' : "
+            f"la droite ne capture pas l'effet réel — la simulation linéaire est à interpréter avec prudence."
+        )
+
+    # 5. asymétrie/distribution — premier warning significatif
+    for w in ctx.warnings:
+        if "asymétrique" in w.lower() or "queue lourde" in w.lower() or "beaucoup de valeurs à zéro" in w.lower():
+            return w
+
+    # 6. saisonnalité
+    for w in ctx.warnings:
+        if "saisonnier" in w.lower() or "temporelle" in w.lower():
+            return w
+
+    # 7. meilleure corrélation fiable
+    for c in ctx.top_correlations:
+        if c.get("significant_after_correction"):
+            return (
+                f"Signal le plus fiable : '{c['column_a']}' ↔ '{c['column_b']}' "
+                f"(r={c['value']:.2f}, significatif après correction)."
+            )
+
+    if ctx.warnings:
+        return ctx.warnings[0]
+    return None
 
 
 def _build_report_result(ctx: ReportBuildContext) -> ReportResult:
@@ -373,6 +563,7 @@ def _build_report_result(ctx: ReportBuildContext) -> ReportResult:
         warnings=ctx.warnings,
         exploitability=ctx.exploitability,
         simulation=ctx.simulation,
+        main_insight=ctx.main_insight,
     )
 
 
@@ -404,4 +595,5 @@ def generate_report(
     _populate_nonlinearity_and_asymmetry(ctx)
     _populate_simulation(ctx)
     _populate_seasonality_and_score(ctx)
+    ctx.main_insight = _build_main_insight(ctx)
     return _build_report_result(ctx)
