@@ -612,18 +612,18 @@ class TestMainInsight:
             assert any(term in report["main_insight"].lower() for term in ["non fiable", "exploitable", "peu fiable", "r²"])
 
     def test_main_insight_paliers(self):
-        """Test que paliers génère le warning approprié."""
-        # Dataset avec paliers métier (grille salariale)
+        """Test que paliers ne bloque pas sur les count data."""
+        # Dataset avec count data (Tickets) pour vérifier exclusion
         df = pd.DataFrame({
-            "Anciennete_Annees": [2, 3, 5, 7, 8, 10, 12, 15] * 10,
-            "Salaire": [2800, 2800, 3800, 3800, 4800, 4800, 5800, 5800] * 10,
+            "Tickets": [0, 1, 2, 3, 4, 5] * 20,
+            "Satisfaction": [3, 4, 5, 6, 7, 8] * 20,
         })
-        sim_config = SimulationConfig(target="Salaire", feature="Anciennete_Annees", change_pct=0.20)
+        sim_config = SimulationConfig(target="Satisfaction", feature="Tickets", change_pct=0.20)
         report = generate_report(df, simulation_config=sim_config)
         
-        # Le main_insight doit mentionner les paliers
+        # Le main_insight ne doit PAS mentionner de paliers (exclusion count data)
         if report.get("main_insight"):
-            assert "paliers" in report["main_insight"].lower() or "palier" in report["main_insight"].lower()
+            assert "paliers" not in report["main_insight"].lower() and "palier" not in report["main_insight"].lower()
 
     def test_main_insight_confounder(self):
         """Test que confondant fort est prioritaire."""

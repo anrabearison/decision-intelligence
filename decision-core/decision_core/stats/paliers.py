@@ -7,18 +7,20 @@ simulation linéaire continue est trompeuse.
 
 Heuristique :
 - feature numérique discrète (peu de valeurs uniques)
-- n_unique <= 15
+- n_unique <= 25
 - faible dispersion intra-groupe vs dispersion globale
+- exclusion des colonnes de comptage (count data)
 
 Si intra_std / global_std < 0.40 (ou global_std ==0) → paliers probables.
 """
 import pandas as pd
 import numpy as np
+from decision_core.stats.distribution import detect_count_data_distribution
 
 
 def is_discrete_paliers_feature(
     series: pd.Series,
-    max_unique: int = 15,
+    max_unique: int = 25,
     intra_ratio_threshold: float = 0.40,
 ) -> tuple[bool, str | None]:
     """
@@ -37,6 +39,9 @@ def is_discrete_paliers_feature(
         return False, None
     # Doit être numérique
     if not pd.api.types.is_numeric_dtype(s):
+        return False, None
+    # Exclure les colonnes de comptage (count data) pour éviter faux positifs sur Tickets, etc.
+    if detect_count_data_distribution(s) is not None:
         return False, None
     n_unique = s.nunique()
     if n_unique > max_unique or n_unique < 2:
@@ -79,7 +84,7 @@ def detect_paliers_for_simulation(
     df: pd.DataFrame,
     feature: str,
     target: str | None = None,
-    max_unique: int = 15,
+    max_unique: int = 25,
 ) -> tuple[bool, str | None]:
     """
     Wrapper pour simulation : teste la feature, et si target fourni, vérifie aussi
