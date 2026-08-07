@@ -1,0 +1,54 @@
+# docker-compose.yml — développement local uniquement
+# SPEC.md §12 : réservé au dev local (tous services + Postgres ensemble), jamais en prod sur Vercel/Railway.
+# Usage : docker compose up --build
+# Prérequis : .env.example copié vers .env si besoin de surcharger les ports/clés.
+
+services:
+  engine:
+    build:
+      context: ./decision-engine
+      dockerfile: Dockerfile
+    # Fallback si pas de Dockerfile : image python + commande uvicorn
+    # (garde le compose valide même avant Phase 5)
+    image: decision-engine:dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "${ENGINE_PORT:-8000}:8000"
+    environment:
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY:-}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-http://localhost:5173}"
+    volumes:
+      - ./decision-engine:/app
+      - ./decision-core:/opt/decision-core:ro
+    working_dir: /app
+    restart: unless-stopped
+
+  frontend:
+    image: node:20-alpine
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+    environment:
+      VITE_API_URL: "${VITE_API_URL:-http://localhost:8000}"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    working_dir: /app
+    depends_on:
+      - engine
+    restart: unless-stopped
+
+  # Phase 5+ — décommenter quand NestJS/Supabase sont introduits
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: decision
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+
+# volumes:
+#   pgdata:

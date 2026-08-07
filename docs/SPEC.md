@@ -1,8 +1,8 @@
 # Decision Intelligence Engine — Spécification technique
 
 **Repo** : `github.com/anrabearison/decision-intelligence`
-**Dernière mise à jour** : Phase 1a complète, Phase 2 en cours (frontend fonctionnel)
-**Statut des tests** : 129 tests `decision-core`, 22 tests `decision-engine`, 7 tests `frontend` (158 au total)
+**Dernière mise à jour** : Phase 2 fonctionnelle — non-régression 18 CSV + `.env.example`/`docker-compose.yml` (août 2026)
+**Statut des tests** : 297 tests `decision-core` (dont 60 non-régression 18 CSV), 22 tests `decision-engine`, 8 tests `frontend` (2 fichiers, 327 au total)
 
 ---
 
@@ -216,7 +216,7 @@ React 18 + Vite, un seul écran (pas de routing).
 
 **Client API** centralisé (`src/api/client.js`) — un seul point de changement le jour où NestJS s'insère entre le frontend et `decision-engine`.
 
-**Gap comblé** : infrastructure de test ajoutée (Vitest + Testing Library), 7 tests. Verrouillent 3 régressions déjà rencontrées en revue de code : `change_pct: null` non géré (crash `TypeError`), `significant_after_correction` (fix P1) jamais affiché à l'utilisateur, absence de validation de taille de fichier côté client malgré le texte "max 50 Mo" affiché. Comblait un gap documenté sur plusieurs commits précédents, qui avait permis à un bug d'atteindre la production malgré des tests backend au vert.
+**Gap comblé** : infrastructure de test ajoutée (Vitest + Testing Library), 8 tests (2 fichiers : `ReportView` 6 tests, `UploadZone` 2 tests). Verrouillent 3 régressions déjà rencontrées en revue de code : `change_pct: null` non géré (crash `TypeError`), `significant_after_correction` (fix P1) jamais affiché à l'utilisateur, absence de validation de taille de fichier côté client malgré le texte "max 50 Mo" affiché. Comblait un gap documenté sur plusieurs commits précédents, qui avait permis à un bug d'atteindre la production malgré des tests backend au vert.
 
 ---
 
@@ -246,7 +246,7 @@ cd decision-core && pip install -e . && pytest tests/ -v
 cd decision-engine && pip install -e ../decision-core -r requirements.txt && pytest tests/ -v
 ```
 
-129 + 22 + 7 = 158 tests, structurés en classes par cas (`TestX`, une méthode = un scénario).
+297 + 22 + 8 = 327 tests, structurés en classes par cas (`TestX`, une méthode = un scénario). `decision-core` inclut `tests/test_examples_non_regression.py` (18 CSV, 60 tests, seuils P1.2 gelés).
 
 ---
 
