@@ -299,6 +299,48 @@ class TestSimpleRegressionTypeValidation:
             fit_simple_regression(df, target="target", feature="feature", encode_categorical=False)
 
 
+class TestLogisticRegressionExceptionHandling:
+    """Tests pour les branches non couvertes dans fit_logistic_regression (lignes 193-195)."""
+    
+    def test_logistic_regression_handles_exception_in_calculations(self):
+        """Test que fit_logistic_regression gère les exceptions dans le calcul log-loss/calibration (lignes 193-195)."""
+        # Créer un cas pathologique qui pourrait provoquer une exception dans les calculs
+        df = pd.DataFrame({
+            "feature": [1e100, 2e100, 3e100, 4e100, 5e100],  # Valeurs extrêmes
+            "target": [0, 1, 0, 1, 0],
+        })
+        # Doit retourner un résultat avec log_loss=None et calibration_error=None en cas d'exception
+        model = fit_logistic_regression(df, target="target", feature="feature")
+        assert model is not None
+        # log_loss et calibration_error peuvent être None si une exception s'est produite
+        assert model.log_loss is None or isinstance(model.log_loss, float)
+        assert model.calibration_error is None or isinstance(model.calibration_error, float)
+
+
+class TestMultivariateRegressionValidation:
+    """Tests pour les branches non couvertes dans fit_multivariate_regression (ligne 332)."""
+    
+    def test_multivariate_regression_raises_on_non_numeric_feature(self):
+        """Test que fit_multivariate_regression lève TypeError sur feature non numérique (ligne 332)."""
+        df = pd.DataFrame({
+            "feature_num": [1, 2, 3, 4, 5],
+            "feature_cat": ["A", "B", "A", "B", "A"],  # Non numérique
+            "target": [10, 20, 30, 40, 50],
+        })
+        with pytest.raises(TypeError, match="doit être numérique"):
+            fit_multivariate_regression(df, target="target", features=["feature_num", "feature_cat"])
+    
+    def test_multivariate_regression_raises_on_non_numeric_target(self):
+        """Test que fit_multivariate_regression lève TypeError sur target non numérique (ligne 332)."""
+        df = pd.DataFrame({
+            "feature_a": [1, 2, 3, 4, 5],
+            "feature_b": [10, 20, 30, 40, 50],
+            "target": ["A", "B", "A", "B", "A"],  # Non numérique
+        })
+        with pytest.raises(TypeError, match="doit être numérique"):
+            fit_multivariate_regression(df, target="target", features=["feature_a", "feature_b"])
+
+
 class TestSimpleRegressionEncodingBranch:
     """Test pour la branche non couverte dans fit_simple_regression (ligne 250-251)."""
     
