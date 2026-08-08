@@ -19,6 +19,12 @@ def _detect_temporal_columns(df: pd.DataFrame) -> list:
       - 'Budget_Par_Jour' → mots {'budget', 'par', 'jour'} → détecté ✓
       - 'DateVente' (CamelCase) → 'Date_Vente' → {'date', 'vente'} → détecté ✓
 
+    Exclut les métriques numériques continues : une colonne float64/int64
+    avec plus de 52 valeurs uniques est une mesure (Litres_Lait_Jour,
+    Chiffre_Affaires_Jour), pas un index temporel. Les vraies colonnes
+    temporelles sont soit object (Date, Saison, Semaine), soit numériques
+    avec peu de valeurs distinctes (Mois=1..12, Semaine=1..52).
+
     Args:
         df: DataFrame pandas à analyser.
 
@@ -39,6 +45,22 @@ def _detect_temporal_columns(df: pd.DataFrame) -> list:
         )
         # 3. Intersection avec les mots-clés temporels
         if parts & temporal_set:
+            # Exclure les métriques numériques continues
+            col_dtype = df[col].dtype
+            n_unique = df[col].nunique()
+            
+            # Si DataFrame vide (n_unique == 0), baser la décision uniquement sur le nom
+            if n_unique == 0:
+                found.append(col)
+                continue
+            
+            # float64 : métrique continue (Litres_Lait_Jour, Chiffre_Affaires_Jour)
+            if col_dtype in (float, 'float64'):
+                continue
+            # int64 : métrique continue si > 52 valeurs (semaines, mois)
+            # mais temporel si <= 52 (Mois=1..12, Semaine=1..52)
+            if str(col_dtype).startswith('int') and n_unique > 52:
+                continue
             found.append(col)
     return found
 

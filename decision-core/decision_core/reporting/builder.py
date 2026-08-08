@@ -419,9 +419,29 @@ def _populate_significant_subgroups(ctx: ReportBuildContext) -> None:
         targets_to_scan = ctx.numeric_cols
     
     subgroup_map: dict[str, dict] = {}
+    deterministic_pairs = set()  # Track (cat_col, num_col) pairs to avoid duplicates
+    
     for target in targets_to_scan:
         for subgroup in detect_significant_subgroups(ctx.df, target):
             column = subgroup["column"]
+            
+            # Vérifier si la relation est déterministe (variance intra-groupe = 0)
+            # Une relation déterministe : chaque catégorie a une valeur constante
+            group_std = ctx.df.groupby(column)[target].std().fillna(0).max()
+            if group_std == 0:
+                # Relation déterministe détectée
+                pair_key = (column, target)
+                if pair_key not in deterministic_pairs:
+                    deterministic_pairs.add(pair_key)
+                    ctx.warnings.append(
+                        f"Relation déterministe détectée : '{column}' détermine entièrement '{target}' "
+                        f"(variance intra-groupe = 0 dans chaque catégorie). "
+                        f"C'est une règle de gestion encodée dans les données, pas une corrélation statistique. "
+                        f"La valeur de '{target}' est entièrement prévisible dès que '{column}' est connue."
+                    )
+                # Ne pas ajouter au subgroup_map (pas de warning "Sous-groupe significatif")
+                continue
+            
             existing = subgroup_map.get(column)
             if existing is None or subgroup["eta_squared"] > existing["eta_squared"]:
                 subgroup_map[column] = subgroup
