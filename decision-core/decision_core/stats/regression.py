@@ -214,16 +214,35 @@ def validate_regression_inputs(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     - Vérifie qu'il reste assez de lignes après nettoyage.
     - Vérifie qu'aucune colonne n'a une variance nulle (une variable
       constante ne peut pas participer à une régression linéaire).
+    - Vérifie que les colonnes sont de type numérique.
 
     Retourne le sous-DataFrame nettoyé (colonnes demandées uniquement).
     """
+    # Vérifier que les colonnes existent
+    for col in columns:
+        if col not in df.columns:
+            raise ValueError(f"La colonne '{col}' n'existe pas dans le DataFrame.")
+    
+    # Vérifier que les colonnes sont numériques
+    for col in columns:
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            raise TypeError(
+                f"La colonne '{col}' doit être numérique pour une régression (type actuel : {df[col].dtype}). "
+                f"Les colonnes textuelles ou catégorielles ne sont pas supportées directement."
+            )
+    
     subset = df[columns].dropna()
 
     if len(subset) < MIN_ROWS_FOR_REGRESSION:
+        # Détail du nombre de NaN par colonne pour aider au diagnostic
+        nan_counts = {col: df[col].isna().sum() for col in columns}
+        nan_details = ", ".join([f"{col}: {nan}/{len(df)} NaN" for col, nan in nan_counts.items()])
         raise InsufficientDataError(
             f"Pas assez de données pour une régression fiable : "
             f"{len(subset)} ligne(s) valide(s) après retrait des valeurs "
-            f"manquantes (minimum requis : {MIN_ROWS_FOR_REGRESSION})."
+            f"manquantes (minimum requis : {MIN_ROWS_FOR_REGRESSION}). "
+            f"Détail NaN : {nan_details}. Vérifiez que les colonnes '{columns[0]}' et '{columns[1]}' "
+            f"ont des données simultanément disponibles."
         )
 
     for col in columns:

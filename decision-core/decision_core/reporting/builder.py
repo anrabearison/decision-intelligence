@@ -664,25 +664,60 @@ def _build_main_insight(ctx: ReportBuildContext) -> str | None:
                 f"Une simulation continue est trompeuse — préférez une analyse par tranche."
             )
 
-    # 2. confounder fort (déjà dans warnings)
+    # 2. confounder fort (déjà dans warnings) — prioriser si lié à la simulation
+    sim_feat = (ctx.typed_simulation.feature if ctx.typed_simulation else None)
+    sim_target = (ctx.typed_simulation.target if ctx.typed_simulation else None)
+    
     for w in ctx.warnings:
         if "facteur(s) confondant(s)" in w or "spurieuse" in w:
-            # extraire les noms si possible
+            # Si le warning mentionne la feature ou la target de la simulation, le prioriser
+            if sim_feat and sim_feat in w:
+                return w + " Vérifiez ce facteur avant d'interpréter la corrélation comme causale."
+            if sim_target and sim_target in w:
+                return w + " Vérifiez ce facteur avant d'interpréter la corrélation comme causale."
+    
+    # Si aucun confounder lié à la simulation, prendre le premier confounder générique
+    for w in ctx.warnings:
+        if "facteur(s) confoundant(s)" in w or "spurieuse" in w:
             return w + " Vérifiez ce facteur avant d'interpréter la corrélation comme causale."
 
-    # 3. sous-groupe dominant
+    # 3. sous-groupe dominant — prioriser si lié à la simulation
     if ctx.significant_subgroups:
+        for subgroup in ctx.significant_subgroups:
+            eta = subgroup.get("eta_squared", 0)
+            if eta >= 0.5:
+                # Si le sous-groupe est la feature ou la target de la simulation, le prioriser
+                if sim_feat and subgroup["column"] == sim_feat:
+                    return (
+                        f"La variable '{subgroup['column']}' explique {eta:.0%} des écarts — c'est votre feature simulée. "
+                        f"Analysez séparément par '{subgroup['column']}' avant de simuler globalement."
+                    )
+                if sim_target and subgroup["column"] == sim_target:
+                    return (
+                        f"La variable '{subgroup['column']}' explique {eta:.0%} des écarts — c'est votre cible. "
+                        f"Analysez séparément par '{subgroup['column']}' avant de simuler globalement."
+                    )
+        
+        # Si aucun sous-groupe lié à la simulation, prendre le plus fort
         top = ctx.significant_subgroups[0]
         eta = top.get("eta_squared", 0)
         if eta >= 0.5:
-            sim_feat = (ctx.typed_simulation.feature if ctx.typed_simulation else None)
             return (
                 f"La variable '{top['column']}' explique {eta:.0%} des écarts — bien plus que votre feature "
                 f"'{sim_feat or 'testée'}'. Analysez séparément par '{top['column']}' avant de simuler globalement."
             )
 
-    # 4. non-linéarité
+    # 4. non-linéarité — prioriser si lié à la simulation
     if ctx.nonlinearity_patterns:
+        for p in ctx.nonlinearity_patterns:
+            # Si la non-linéarité est entre la feature et la target de la simulation, la prioriser
+            if sim_feat and sim_target:
+                if (p.feature == sim_feat and p.target == sim_target) or (p.feature == sim_target and p.target == sim_feat):
+                    return (
+                        f"Relation non-linéaire détectée entre '{p.feature}' et '{p.target}' : "
+                        f"la droite ne capture pas l'effet réel — la simulation linéaire est à interpréter avec prudence."
+                    )
+        # Sinon prendre la première non-linéarité
         p = ctx.nonlinearity_patterns[0]
         return (
             f"Relation non-linéaire détectée entre '{p.feature}' et '{p.target}' : "
