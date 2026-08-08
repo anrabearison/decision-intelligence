@@ -48,5 +48,8 @@ class ReportBuildContext:
     # Insight principal
     main_insight: str | None = None
 
+    # Warnings structurés
+    warnings_structured: list[dict[str, Any]] = field(default_factory=list)
+
     # Score d'exploitabilité
     exploitability: Any = None

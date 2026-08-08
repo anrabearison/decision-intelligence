@@ -33,6 +33,7 @@ def _compute_exploitability_score(
     n_warnings: int,
     n_anomaly_cols: int,
     r_squared: float | None,
+    actionable: bool | None = None,
 ) -> ExploitabilityScore:
     """R9 — Calcule un score synthétique d'exploitabilité du dataset.
 
@@ -41,12 +42,14 @@ def _compute_exploitability_score(
     - Nombre de warnings générés
     - R² de la simulation si disponible
     - Présence de colonnes avec anomalies
+    - Simulation non-actionnable (paliers, R² très faible) → cap orange
 
     Args:
         n_rows: Nombre de lignes du dataset.
         n_warnings: Nombre de warnings générés.
         n_anomaly_cols: Nombre de colonnes avec anomalies.
         r_squared: R² de la simulation si disponible.
+        actionable: Si False, simulation non-actionnable (paliers, R² faible).
 
     Returns:
         ExploitabilityScore typé avec level, score et summary.
@@ -83,6 +86,10 @@ def _compute_exploitability_score(
             score -= 30
         elif r_squared < LOW_R_SQUARED_THRESHOLD:
             score -= 15
+
+    # P0-1bis : caper score en orange si simulation non-actionnable (paliers, etc.)
+    if actionable is False and score >= 70:
+        score = 69  # Force orange tout en gardant le score calculé
 
     score = max(0, score)
 

@@ -53,6 +53,7 @@ class ReportResult:
     exploitability: ExploitabilityScore
     simulation: dict[str, Any] | None = None
     main_insight: str | None = None
+    warnings_structured: list[dict[str, Any]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Sérialise le rapport en dict brut pour JSON/FastAPI."""
@@ -69,6 +70,8 @@ class ReportResult:
             result["simulation"] = self.simulation
         if self.main_insight is not None:
             result["main_insight"] = self.main_insight
+        if self.warnings_structured is not None:
+            result["warnings_structured"] = self.warnings_structured
         return result
 
     # -- Rétrocompatibilité dict-like --

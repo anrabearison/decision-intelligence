@@ -374,6 +374,16 @@ def _populate_simulation(ctx: ReportBuildContext) -> None:
                 f"Simulation non exploitable : {ctx.simulation.get('non_actionable_reason','Raison non spécifiée')} "
                 f"Calcul indicatif uniquement — ne pas utiliser pour une décision."
             )
+            # P3-15 : warning structuré simulation non actionnable
+            code = "SIMULATION_NON_ACTIONABLE_R2" if "R²" in (ctx.simulation.get("non_actionable_reason") or "") else "SIMULATION_PALIERS"
+            ctx.warnings_structured.append({
+                "code": code,
+                "severity": "high",
+                "category": "simulation",
+                "columns": [ctx.typed_simulation.feature, ctx.typed_simulation.target],
+                "message": ctx.simulation.get("non_actionable_reason", ""),
+                "recommendation": "Préférez une analyse segmentée ou par tranche avant de décider.",
+            })
         _build_simulation_warnings(
             ctx.df, ctx.typed_simulation, ctx.simulation, ctx.n_rows, ctx.warnings, ctx.nonlinearity_patterns
         )
@@ -386,6 +396,11 @@ def _populate_simulation(ctx: ReportBuildContext) -> None:
             )
             if paliers_msg not in ctx.warnings:
                 ctx.warnings.append(paliers_msg)
+        # P3-15 : reprendre warnings_structured de la simulation si présents
+        if ctx.simulation.get("warnings_structured"):
+            for ws in ctx.simulation["warnings_structured"]:
+                if ws not in ctx.warnings_structured:
+                    ctx.warnings_structured.append(ws)
 
 
 def _populate_seasonality_and_score(ctx: ReportBuildContext) -> None:
@@ -456,11 +471,13 @@ def _populate_seasonality_and_score(ctx: ReportBuildContext) -> None:
     
     # R9 : Score d'exploitabilité synthétique
     sim_r_squared = (ctx.simulation or {}).get("model_r_squared")
+    sim_actionable = (ctx.simulation or {}).get("actionable")
     ctx.exploitability = _compute_exploitability_score(
         n_rows=ctx.n_rows,
         n_warnings=len(ctx.warnings),
         n_anomaly_cols=len(ctx.anomalies),
         r_squared=sim_r_squared,
+        actionable=sim_actionable,
     )
 
 
@@ -563,6 +580,7 @@ def _build_report_result(ctx: ReportBuildContext) -> ReportResult:
         exploitability=ctx.exploitability,
         simulation=ctx.simulation,
         main_insight=ctx.main_insight,
+        warnings_structured=ctx.warnings_structured if ctx.warnings_structured else None,
     )
 
 

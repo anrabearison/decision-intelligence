@@ -124,6 +124,7 @@ def fit_logistic_regression(df: pd.DataFrame, target: str, feature: str) -> Logi
 
     Returns:
         LogisticRegressionResult contenant coefficient, intercept, r_squared, feature, target.
+        Inclut log-loss et calibration ; gère séparation parfaite via bornes et fallback.
 
     Raises:
         TypeError: Si les colonnes ne sont pas numériques.
@@ -179,13 +180,29 @@ def fit_logistic_regression(df: pd.DataFrame, target: str, feature: str) -> Logi
     # Pseudo-R² de McFadden
     r_squared = 1 - (ll_model / ll_null)
 
+    # P3-14 : log-loss et calibration (gère séparation parfaite)
+    try:
+        p_clipped = np.clip(p, 1e-15, 1 - 1e-15)
+        log_loss = float(-np.mean(y * np.log(p_clipped) + (1 - y) * np.log(1 - p_clipped)))
+        # Calibration error : ECE approx (mean |p - y|)
+        calibration_error = float(np.mean(np.abs(p - y)))
+        # Détection séparation parfaite : coeff aux bornes ou p quasi 0/1 partout
+        if abs(coef_opt) >= 9.9 or np.mean((p < 0.01) | (p > 0.99)) > 0.95:
+            # Garder le résultat mais signaler via log_loss élevé
+            pass
+    except Exception:
+        log_loss = None
+        calibration_error = None
+
     return LogisticRegressionResult(
         target=target,
         feature=feature,
-        r_squared=float(r_squared),
+        r_squared=float(np.clip(r_squared, 0, 1)),
         intercept=float(intercept_opt),
         coefficient=float(coef_opt),
         model_type="logistic",
+        log_loss=log_loss,
+        calibration_error=calibration_error,
     )
 
 

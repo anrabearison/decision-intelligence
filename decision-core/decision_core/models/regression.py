@@ -22,16 +22,19 @@ class SimpleRegressionResult:
 @dataclass(frozen=True)
 class LogisticRegressionResult:
     """Encapsule les résultats d'une régression logistique pour cibles binaires."""
+
     target: str
     feature: str
     r_squared: float
     intercept: float
     coefficient: float  # coefficient de la feature (équivalent à slope)
     model_type: str = "logistic"  # pour distinguer de la régression linéaire
+    log_loss: float | None = None
+    calibration_error: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convertit l'objet en dictionnaire brut pour compatibilité JSON/FastAPI."""
-        return asdict(self)
+        return {k: v for k, v in asdict(self).items() if v is not None}
 
 
 @dataclass(frozen=True)

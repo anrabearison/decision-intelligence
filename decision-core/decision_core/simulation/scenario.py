@@ -129,6 +129,99 @@ def simulate_scenario(
         except Exception:
             pass
 
+    # P3-12 : intervalle d'incertitude (prediction interval à 80%)
+    prediction_interval = None
+    try:
+        clean = df[[feature, target]].dropna()
+        x = clean[feature].values
+        y = clean[target].values
+        # Résidus du modèle
+        if model_type == "logistic":
+            # Pour logistique, intervalle sur probabilité via écart-type des prédictions
+            p = 1 / (1 + np.exp(-np.clip(model.intercept + model.coefficient * x, -500, 500)))
+            resid_std = float(np.std(y - p)) if len(y) > 1 else 0.0
+            delta = 1.28 * resid_std  # ~80% interval
+            prediction_interval = {
+                "lower": float(max(0.0, min(1.0, simulated - delta))),
+                "upper": float(max(0.0, min(1.0, simulated + delta))),
+                "confidence": 0.80,
+            }
+        else:
+            y_pred = model.intercept + model.slope * x
+            resid_std = float(np.std(y - y_pred)) if len(y) > 1 else 0.0
+            delta = 1.28 * resid_std
+            prediction_interval = {
+                "lower": float(simulated - delta),
+                "upper": float(simulated + delta),
+                "confidence": 0.80,
+            }
+            if config.bounds is not None:
+                lo, hi = float(config.bounds[0]), float(config.bounds[1])
+                prediction_interval["lower"] = max(lo, prediction_interval["lower"])
+                prediction_interval["upper"] = min(hi, prediction_interval["upper"])
+    except Exception:
+        prediction_interval = None
+
+    # P3-13 : validation croisée prédictive (5-fold si n>=20)
+    cross_validation = None
+    try:
+        clean = df[[feature, target]].dropna()
+        n = len(clean)
+        if n >= 20 and model_type != "logistic":
+            # 5-fold CV simple
+            idx = np.arange(n)
+            np.random.seed(0)
+            np.random.shuffle(idx)
+            fold = n // 5
+            r2_list = []
+            for k in range(5):
+                test_idx = idx[k * fold : (k + 1) * fold if k < 4 else n]
+                train_idx = np.setdiff1d(idx, test_idx)
+                x_train, y_train = clean[feature].values[train_idx], clean[target].values[train_idx]
+                x_test, y_test = clean[feature].values[test_idx], clean[target].values[test_idx]
+                if len(x_train) < 3 or len(x_test) < 2:
+                    continue
+                slope, intercept, r_val, _, _ = stats.linregress(x_train, y_train)
+                y_pred = intercept + slope * x_test
+                ss_res = np.sum((y_test - y_pred) ** 2)
+                ss_tot = np.sum((y_test - np.mean(y_test)) ** 2)
+                r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0
+                r2_list.append(r2)
+            if r2_list:
+                cv_r2_mean = float(np.mean(r2_list))
+                # MAE/RMSE sur tout le dataset en holdout approx
+                y_pred_all = model.intercept + model.slope * clean[feature].values if model_type != "logistic" else 1/(1+np.exp(-np.clip(model.intercept + model.coefficient * clean[feature].values, -500,500)))
+                mae = float(np.mean(np.abs(clean[target].values - y_pred_all)))
+                rmse = float(np.sqrt(np.mean((clean[target].values - y_pred_all) ** 2)))
+                cross_validation = {"cv_r2_mean": cv_r2_mean, "mae": mae, "rmse": rmse, "folds": 5}
+    except Exception:
+        cross_validation = None
+
+    # P3-15 : warnings structurés
+    warnings_structured = []
+    try:
+        if not actionable and non_actionable_reason:
+            code = "SIMULATION_NON_ACTIONABLE_R2" if "R²" in non_actionable_reason else "SIMULATION_PALIERS"
+            warnings_structured.append({
+                "code": code,
+                "severity": "high",
+                "category": "simulation",
+                "columns": [feature, target],
+                "message": non_actionable_reason,
+                "recommendation": "Préférez une analyse segmentée ou par tranche avant de décider.",
+            })
+        if model.r_squared < 0.05 and actionable:
+            warnings_structured.append({
+                "code": "SIMULATION_LOW_R2",
+                "severity": "medium",
+                "category": "simulation",
+                "columns": [feature, target],
+                "message": f"R² faible ({model.r_squared:.2f})",
+                "recommendation": "Interprétez avec prudence.",
+            })
+    except Exception:
+        pass
+
     return SimulationResult(
         baseline=float(baseline),
         simulated=float(simulated),
@@ -145,4 +238,7 @@ def simulate_scenario(
         bounds_applied=bounds_applied,
         actionable=actionable,
         non_actionable_reason=non_actionable_reason,
+        prediction_interval=prediction_interval,
+        cross_validation=cross_validation,
+        warnings_structured=warnings_structured if warnings_structured else None,
     )

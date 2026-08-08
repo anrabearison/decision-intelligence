@@ -22,6 +22,10 @@ class SimulationResult:
     bounds_applied: bool | None = None
     actionable: bool = True
     non_actionable_reason: str | None = None
+    # P3 — Robustesse
+    prediction_interval: dict[str, float] | None = None
+    cross_validation: dict[str, float] | None = None
+    warnings_structured: list[dict[str, Any]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v is not None}

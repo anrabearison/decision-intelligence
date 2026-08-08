@@ -396,17 +396,27 @@ class TestScoreExploitabilite:
 
     def test_compute_exploitability_score_logic(self):
         """_compute_exploitability_score retourne les niveaux attendus."""
-        green = _compute_exploitability_score(50, 0, 0, 0.9)
+        green = _compute_exploitability_score(50, 0, 0, 0.9, actionable=True)
         assert green.level == "green"
 
-        red = _compute_exploitability_score(5, 5, 3, 0.05)
+        red = _compute_exploitability_score(5, 5, 3, 0.05, actionable=True)
         assert red.level == "red"
 
     def test_low_r_squared_downgrades_score(self):
         """Un R² très faible pénalise le score d'exploitabilité."""
-        good = _compute_exploitability_score(50, 1, 0, 0.9)
-        bad = _compute_exploitability_score(50, 1, 0, 0.02)
+        good = _compute_exploitability_score(50, 1, 0, 0.9, actionable=True)
+        bad = _compute_exploitability_score(50, 1, 0, 0.02, actionable=True)
         assert bad.score < good.score
+
+    def test_non_actionable_caps_score_to_orange(self):
+        """Si actionable=False, le score est capé en orange même si calculé green."""
+        # R² bon, mais paliers détectés → should be orange
+        green_calc = _compute_exploitability_score(50, 0, 0, 0.9, actionable=True)
+        assert green_calc.level == "green"
+
+        orange_capped = _compute_exploitability_score(50, 0, 0, 0.9, actionable=False)
+        assert orange_capped.level == "orange"
+        assert orange_capped.score < 70
 
     def test_marketing_score_is_lower_than_tourism_on_real_examples(self):
         examples_dir = Path(__file__).resolve().parents[1] / "examples"
