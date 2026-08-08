@@ -10,6 +10,67 @@ const baseReport = {
   simulation: null,
 }
 
+describe('ReportView - exploitability et main_insight', () => {
+  it('affiche le niveau, le score et le résumé quand exploitability est présent', () => {
+    const report = {
+      ...baseReport,
+      exploitability: {
+        level: 'orange',
+        score: 40,
+        summary: 'Interprétation prudente — plusieurs limites détectées, croiser avec l\'expertise métier.'
+      },
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText('ORANGE')).toBeTruthy()
+    expect(screen.getByText('40/100')).toBeTruthy()
+    expect(screen.getByText(/Interprétation prudente/)).toBeTruthy()
+  })
+
+  it('ne plante pas quand exploitability est absent (compatibilité ascendante)', () => {
+    const report = {
+      ...baseReport,
+      // exploitability non inclus
+    }
+    render(<ReportView report={report} />)
+    // Le rapport s'affiche normalement sans crash
+    expect(screen.getByText('40')).toBeTruthy()
+    expect(screen.getByText('lignes')).toBeTruthy()
+    expect(screen.queryByText('ORANGE')).toBeNull()
+    expect(screen.queryByText('40/100')).toBeNull()
+  })
+
+  it('affiche main_insight quand présent', () => {
+    const report = {
+      ...baseReport,
+      main_insight: 'La variable \'Produit\' explique 100% des écarts — bien plus que votre feature \'testée\'. Analysez séparément par \'Produit\' avant de simuler globalement.',
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText(/La variable 'Produit' explique 100%/)).toBeTruthy()
+  })
+
+  it('ne plante pas quand main_insight est absent ou null', () => {
+    const report = {
+      ...baseReport,
+      main_insight: null,
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText('40')).toBeTruthy()
+    expect(screen.getByText('lignes')).toBeTruthy()
+    // Le champ insight ne s'affiche pas si null
+    expect(screen.queryByText(/La variable 'Produit'/)).toBeNull()
+  })
+
+  it('ne plante pas quand main_insight est absent du rapport', () => {
+    const report = {
+      ...baseReport,
+      // main_insight non inclus
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText('40')).toBeTruthy()
+    expect(screen.getByText('lignes')).toBeTruthy()
+  })
+})
+
 describe('ReportView - simulation change_pct null (régression connue)', () => {
   it('ne plante pas quand change_pct_reliable est false et change_pct est null', () => {
     const report = {

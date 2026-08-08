@@ -1,12 +1,40 @@
 export default function ReportView({ report }) {
-  const { dataset_summary, warnings, top_correlations, simulation, validation } = report
+  const { dataset_summary, warnings, top_correlations, simulation, validation, exploitability, main_insight } = report
   const hasProbabilityPointChange = simulation?.change_percentage_points !== undefined && simulation?.change_percentage_points !== null
   const formatSimulationValue = (value) => (
     hasProbabilityPointChange ? `${(value * 100).toFixed(1)}%` : value.toFixed(2)
   )
 
+  // Mapping des niveaux d'exploitabilité vers les couleurs CSS existantes
+  const getExploitabilityColor = (level) => {
+    switch (level) {
+      case 'green': return 'var(--safe)'
+      case 'orange': return 'var(--amber)'
+      case 'red': return 'var(--risk)'
+      default: return 'var(--muted)'
+    }
+  }
+
   return (
     <div className="report">
+      {/* Score d'exploitabilité - affiché en premier si présent */}
+      {exploitability && (
+        <section className="report__exploitability">
+          <div className="report__exploitability-badge" style={{ background: getExploitabilityColor(exploitability.level) }}>
+            <span className="report__exploitability-level mono">{exploitability.level.toUpperCase()}</span>
+            <span className="report__exploitability-score mono">{exploitability.score}/100</span>
+          </div>
+          <p className="report__exploitability-summary">{exploitability.summary}</p>
+        </section>
+      )}
+
+      {/* Main insight - affiché si présent, distinct des warnings */}
+      {main_insight && (
+        <section className="report__insight">
+          <p className="report__insight-text">{main_insight}</p>
+        </section>
+      )}
+
       <section className="report__summary">
         <div className="report__stat">
           <span className="report__stat-value mono">{dataset_summary.n_rows}</span>
