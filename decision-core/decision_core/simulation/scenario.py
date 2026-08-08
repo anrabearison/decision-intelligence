@@ -28,6 +28,7 @@ from decision_core.stats.regression import fit_simple_regression
 from decision_core.models import SimulationConfig, SimulationResult
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 
 # Si |baseline| est sous ce seuil relatif à l'écart-type de la cible,
@@ -168,10 +169,9 @@ def simulate_scenario(
         clean = df[[feature, target]].dropna()
         n = len(clean)
         if n >= 20 and model_type != "logistic":
-            # 5-fold CV simple
-            idx = np.arange(n)
-            np.random.seed(0)
-            np.random.shuffle(idx)
+            # 5-fold CV simple avec seed local (anti-pattern np.random.seed évité)
+            rng = np.random.default_rng(0)
+            idx = rng.permutation(n)
             fold = n // 5
             r2_list = []
             for k in range(5):
@@ -189,11 +189,13 @@ def simulate_scenario(
                 r2_list.append(r2)
             if r2_list:
                 cv_r2_mean = float(np.mean(r2_list))
+                # Clip R² négatif pour user-friendly (peut arriver mathématiquement)
+                cv_r2_mean = max(0.0, cv_r2_mean)
                 # MAE/RMSE sur tout le dataset en holdout approx
                 y_pred_all = model.intercept + model.slope * clean[feature].values if model_type != "logistic" else 1/(1+np.exp(-np.clip(model.intercept + model.coefficient * clean[feature].values, -500,500)))
                 mae = float(np.mean(np.abs(clean[target].values - y_pred_all)))
                 rmse = float(np.sqrt(np.mean((clean[target].values - y_pred_all) ** 2)))
-                cross_validation = {"cv_r2_mean": cv_r2_mean, "mae": mae, "rmse": rmse, "folds": 5}
+                cross_validation = {"cv_r2_mean": cv_r2_mean, "mae": mae, "rmse": rmse, "folds": 5, "n": n}
     except Exception:
         cross_validation = None
 

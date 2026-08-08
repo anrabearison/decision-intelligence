@@ -32,6 +32,128 @@ from decision_core.reporting.scoring import SMALL_SAMPLE_THRESHOLD
 from decision_core.reporting.context import ReportBuildContext
 
 
+def _add_structured_warning(
+    ctx: ReportBuildContext,
+    code: str,
+    severity: str,
+    category: str,
+    columns: list[str],
+    message: str,
+    recommendation: str,
+) -> None:
+    """Ajoute un warning structuré au contexte sans dupliquer le code.
+    
+    Args:
+        ctx: Contexte de construction du rapport.
+        code: Code unique du warning (ex: CONFONDER, SUBGROUP_DOMINANT).
+        severity: Niveau de sévérité (high, medium, low).
+        category: Catégorie du warning (correlation, simulation, distribution, etc.).
+        columns: Colonnes concernées par le warning.
+        message: Message explicatif du warning.
+        recommendation: Recommandation d'action.
+    """
+    # Vérifier si code déjà présent pour éviter duplication
+    existing_codes = {w["code"] for w in ctx.warnings_structured}
+    if code in existing_codes:
+        return
+    
+    ctx.warnings_structured.append({
+        "code": code,
+        "severity": severity,
+        "category": category,
+        "columns": columns,
+        "message": message,
+        "recommendation": recommendation,
+    })
+
+
+def _structure_warnings_post_hoc(ctx: ReportBuildContext) -> None:
+    """Structure les warnings existants POST-HOC sans changer les signatures des modules warnings.
+    
+    Analyse les warnings strings existants et génère les dict structurés correspondants.
+    Cette approche évite de changer les signatures des modules warnings pour rétro-compatibilité.
+    """
+    for w in ctx.warnings:
+        # Confounder
+        if "facteur(s) confondant(s)" in w or "spurieuse" in w:
+            # Extraire les colonnes mentionnées
+            columns = []
+            if "entre" in w and "et" in w:
+                parts = w.split("entre ")[1].split(" et ")[0].strip()
+                columns = [p.strip() for p in parts.split(" si ")]
+            _add_structured_warning(
+                ctx,
+                code="CONFOUNDER",
+                severity="high",
+                category="correlation",
+                columns=columns,
+                message=w,
+                recommendation="Vérifiez ce facteur avant d'interpréter la corrélation comme causale.",
+            )
+        
+        # Sous-groupe dominant
+        elif "Sous-groupe significatif détecté" in w and "explique" in w:
+            _add_structured_warning(
+                ctx,
+                code="SUBGROUP_DOMINANT",
+                severity="medium",
+                category="correlation",
+                columns=[],
+                message=w,
+                recommendation="Considérez une analyse segmentée par cette variable pour des insights plus précis.",
+            )
+        
+        # Saisonnalité
+        elif "Effet saisonnier/temporel fort détecté" in w:
+            _add_structured_warning(
+                ctx,
+                code="SAISONNALITE",
+                severity="high",
+                category="saisonnalite",
+                columns=[],
+                message=w,
+                recommendation="Comparer des périodes sans tenir compte de la saison peut fausser l'analyse. Analysez par période avant de conclure.",
+            )
+        
+        # Distribution zero-inflated
+        elif "beaucoup de valeurs à zéro" in w or "Distribution zéro-inflated" in w:
+            _add_structured_warning(
+                ctx,
+                code="DISTRIBUTION_ZERO",
+                severity="medium",
+                category="distribution",
+                columns=[],
+                message=w,
+                recommendation="La moyenne est trompeuse — une approche à deux phases est plus adaptée.",
+            )
+        
+        # Queue lourde
+        elif "quelques gros cas tirent fortement la moyenne" in w or "queue lourde" in w:
+            _add_structured_warning(
+                ctx,
+                code="DISTRIBUTION_HEAVY",
+                severity="medium",
+                category="distribution",
+                columns=[],
+                message=w,
+                recommendation="La moyenne surestime le cas typique — un modèle normal sous-estime le risque des très grandes valeurs.",
+            )
+        
+        # Simulation non-actionnable (déjà fait dans scenario.py, mais on ajoute ici pour cohérence)
+        elif "Simulation non exploitable" in w or "simulation continue est trompeuse" in w:
+            code = "SIMULATION_NON_ACTIONABLE_R2" if "R²" in w else "SIMULATION_PALIERS"
+            _add_structured_warning(
+                ctx,
+                code=code,
+                severity="high",
+                category="simulation",
+                columns=[],
+                message=w,
+                recommendation="Préférez une analyse segmentée ou par tranche avant de décider.",
+            )
+
+
+
 def _normalize_configs(
     simulation_config: SimulationConfig | dict | None,
     analysis_config: AnalysisConfig | dict | None,
@@ -264,10 +386,20 @@ def _populate_correlations(ctx: ReportBuildContext) -> None:
     for corr in ctx.top_correlations[:3]:
         confounders = detect_confounders(ctx.df, corr['column_a'], corr['column_b'])
         if confounders:
-            ctx.warnings.append(
+            warning_msg = (
                 f"Corrélation potentielle spurieuse entre {corr['column_a']} et {corr['column_b']} : "
                 f"facteur(s) confondant(s) détecté(s) : {', '.join(confounders)}. "
                 f"Cette corrélation pourrait être due à une variable tierce plutôt qu'à une relation directe."
+            )
+            ctx.warnings.append(warning_msg)
+            _add_structured_warning(
+                ctx,
+                code="CONFOUNDER",
+                severity="high",
+                category="correlation",
+                columns=[corr['column_a'], corr['column_b']] + confounders,
+                message=warning_msg,
+                recommendation="Vérifiez ce facteur avant d'interpréter la corrélation comme causale.",
             )
 
 
@@ -307,16 +439,36 @@ def _populate_significant_subgroups(ctx: ReportBuildContext) -> None:
         col = subgroup["column"]
         eta = subgroup["eta_squared"]
         if col in temporal_cols:
-            ctx.warnings.append(
+            warning_msg = (
                 f"Effet saisonnier/temporel fort détecté : '{col}' explique {eta:.0%} des écarts "
                 f"— bien plus qu'une simple segmentation. Comparer des périodes sans tenir compte de la saison "
                 f"peut fausser l'analyse. Analysez par période avant de conclure."
             )
+            ctx.warnings.append(warning_msg)
+            _add_structured_warning(
+                ctx,
+                code="SAISONNALITE",
+                severity="high" if eta >= 0.7 else "medium",
+                category="saisonnalite",
+                columns=[col],
+                message=warning_msg,
+                recommendation="Comparer des périodes sans tenir compte de la saison peut fausser l'analyse. Analysez par période avant de conclure.",
+            )
         else:
-            ctx.warnings.append(
+            warning_msg = (
                 f"Sous-groupe significatif détecté : '{col}' explique "
                 f"{eta:.1%} de la variance de la cible (explique {eta:.0%} des écarts). "
                 f"Considérez une analyse segmentée par cette variable pour des insights plus précis."
+            )
+            ctx.warnings.append(warning_msg)
+            _add_structured_warning(
+                ctx,
+                code="SUBGROUP_DOMINANT",
+                severity="high" if eta >= 0.7 else "medium",
+                category="correlation",
+                columns=[col],
+                message=warning_msg,
+                recommendation="Considérez une analyse segmentée par cette variable pour des insights plus précis.",
             )
 
     # P1-7 (suite) : si anomalies existent et sous-groupe fort, contextualiser
@@ -468,6 +620,9 @@ def _populate_seasonality_and_score(ctx: ReportBuildContext) -> None:
                     )
     except Exception:
         pass
+    
+    # P3-15 : Structurer les warnings existants POST-HOC
+    _structure_warnings_post_hoc(ctx)
     
     # R9 : Score d'exploitabilité synthétique
     sim_r_squared = (ctx.simulation or {}).get("model_r_squared")
