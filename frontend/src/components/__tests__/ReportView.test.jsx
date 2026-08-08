@@ -160,3 +160,141 @@ describe('ReportView - significativité statistique des corrélations (régressi
     expect(screen.queryByText('non significatif')).toBeNull()
   })
 })
+
+describe('ReportView - warnings structurés', () => {
+  it('affiche les warnings structurés avec severity, code et recommendation', () => {
+    const report = {
+      ...baseReport,
+      warnings_structured: [
+        {
+          severity: 'high',
+          code: 'DETERMINISTIC',
+          message: 'Relation déterministe détectée',
+          recommendation: 'Analysez séparément par catégorie'
+        }
+      ],
+      warnings: [],
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText('high')).toBeTruthy()
+    expect(screen.getByText('DETERMINISTIC')).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('Relation déterministe détectée'))).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('Analysez séparément par catégorie'))).toBeTruthy()
+  })
+
+  it('ne plante pas quand warnings_structured est absent', () => {
+    const report = {
+      ...baseReport,
+      warnings: ['Ancien warning string'],
+      // warnings_structured non inclus
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText((content) => content.includes('Ancien warning string'))).toBeTruthy()
+  })
+
+  it('affiche les warnings string en complément des warnings structurés', () => {
+    const report = {
+      ...baseReport,
+      warnings_structured: [
+        {
+          severity: 'high',
+          code: 'DETERMINISTIC',
+          message: 'Relation déterministe détectée',
+        }
+      ],
+      warnings: ['Warning string non dupliqué'],
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText('DETERMINISTIC')).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('Warning string non dupliqué'))).toBeTruthy()
+  })
+})
+
+describe('ReportView - simulation étendue', () => {
+  it('affiche le badge Non actionnable quand simulation.actionable est false', () => {
+    const report = {
+      ...baseReport,
+      simulation: {
+        feature: 'Prix',
+        target: 'Ventes',
+        baseline: 100,
+        simulated: 90,
+        change_pct: -10,
+        change_pct_reliable: true,
+        actionable: false,
+        non_actionable_reason: 'Données insuffisantes',
+        model_r_squared: 0.8,
+      },
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText('Non actionnable')).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('Données insuffisantes'))).toBeTruthy()
+  })
+
+  it('affiche lintervalle de prédiction quand présent', () => {
+    const report = {
+      ...baseReport,
+      simulation: {
+        feature: 'Prix',
+        target: 'Ventes',
+        baseline: 100,
+        simulated: 90,
+        change_pct: -10,
+        change_pct_reliable: true,
+        prediction_interval: {
+          lower: 85,
+          upper: 95,
+          confidence: 0.8,
+        },
+        model_r_squared: 0.8,
+      },
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText((content) => content.includes('Intervalle 80%'))).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('85'))).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('95'))).toBeTruthy()
+  })
+
+  it('affiche les métriques de cross-validation quand présentes', () => {
+    const report = {
+      ...baseReport,
+      simulation: {
+        feature: 'Prix',
+        target: 'Ventes',
+        baseline: 100,
+        simulated: 90,
+        change_pct: -10,
+        change_pct_reliable: true,
+        cross_validation: {
+          cv_r2_mean: 0.75,
+          mae: 5.2,
+          rmse: 7.8,
+        },
+        model_r_squared: 0.8,
+      },
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText((content) => content.includes('Validation croisée 5-fold'))).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('0.75'))).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('5.2'))).toBeTruthy()
+    expect(screen.getByText((content) => content.includes('7.8'))).toBeTruthy()
+  })
+
+  it('affiche le warning quand bounds_applied est true', () => {
+    const report = {
+      ...baseReport,
+      simulation: {
+        feature: 'Prix',
+        target: 'Ventes',
+        baseline: 100,
+        simulated: 90,
+        change_pct: -10,
+        change_pct_reliable: true,
+        bounds_applied: true,
+        model_r_squared: 0.8,
+      },
+    }
+    render(<ReportView report={report} />)
+    expect(screen.getByText((content) => content.includes('Résultat borné par les limites physiques'))).toBeTruthy()
+  })
+})

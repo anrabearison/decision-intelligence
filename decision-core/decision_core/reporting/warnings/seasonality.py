@@ -45,21 +45,17 @@ def _detect_temporal_columns(df: pd.DataFrame) -> list:
         )
         # 3. Intersection avec les mots-clés temporels
         if parts & temporal_set:
-            # Exclure les métriques numériques continues
-            col_dtype = df[col].dtype
+            # Exclure les métriques numériques continues (bonne pratique pandas)
             n_unique = df[col].nunique()
-            
-            # Si DataFrame vide (n_unique == 0), baser la décision uniquement sur le nom
             if n_unique == 0:
                 found.append(col)
                 continue
-            
-            # float64 : métrique continue (Litres_Lait_Jour, Chiffre_Affaires_Jour)
-            if col_dtype in (float, 'float64'):
+            # float : mesure continue par jour (Litres_Lait_Jour, Chiffre_Affaires_Jour)
+            if pd.api.types.is_float_dtype(df[col]):
                 continue
-            # int64 : métrique continue si > 52 valeurs (semaines, mois)
-            # mais temporel si <= 52 (Mois=1..12, Semaine=1..52)
-            if str(col_dtype).startswith('int') and n_unique > 52:
+            # int avec >52 valeurs : mesure continue (Visiteurs_Jour 101 valeurs)
+            # int avec ≤52 : index temporel (Mois 1..12, Semaine 1..52)
+            if pd.api.types.is_integer_dtype(df[col]) and n_unique > 52:
                 continue
             found.append(col)
     return found

@@ -419,29 +419,32 @@ def _populate_significant_subgroups(ctx: ReportBuildContext) -> None:
         targets_to_scan = ctx.numeric_cols
     
     subgroup_map: dict[str, dict] = {}
-    deterministic_pairs = set()  # Track (cat_col, num_col) pairs to avoid duplicates
-    
+    deterministic_pairs: set[tuple[str, str]] = set()
+
     for target in targets_to_scan:
         for subgroup in detect_significant_subgroups(ctx.df, target):
             column = subgroup["column"]
-            
-            # Vérifier si la relation est déterministe (variance intra-groupe = 0)
-            # Une relation déterministe : chaque catégorie a une valeur constante
-            group_std = ctx.df.groupby(column)[target].std().fillna(0).max()
-            if group_std == 0:
-                # Relation déterministe détectée
+            # Relation déterministe : chaque groupe a une valeur constante
+            # std == 0 dans chaque catégorie → règle de gestion, pas corrélation
+            try:
+                intra_std_max = ctx.df.groupby(column, observed=True)[target].std().fillna(0).max()
+                is_deterministic = intra_std_max == 0
+            except (KeyError, TypeError, ValueError):
+                is_deterministic = False
+
+            if is_deterministic:
                 pair_key = (column, target)
                 if pair_key not in deterministic_pairs:
                     deterministic_pairs.add(pair_key)
                     ctx.warnings.append(
-                        f"Relation déterministe détectée : '{column}' détermine entièrement '{target}' "
-                        f"(variance intra-groupe = 0 dans chaque catégorie). "
-                        f"C'est une règle de gestion encodée dans les données, pas une corrélation statistique. "
-                        f"La valeur de '{target}' est entièrement prévisible dès que '{column}' est connue."
+                        f"Relation déterministe détectée : '{column}' détermine "
+                        f"entièrement '{target}' (variance intra-groupe = 0 dans chaque "
+                        f"catégorie). C'est une règle de gestion encodée dans les données, "
+                        f"pas une corrélation statistique. La valeur de '{target}' est "
+                        f"entièrement prévisible dès que '{column}' est connue."
                     )
-                # Ne pas ajouter au subgroup_map (pas de warning "Sous-groupe significatif")
                 continue
-            
+
             existing = subgroup_map.get(column)
             if existing is None or subgroup["eta_squared"] > existing["eta_squared"]:
                 subgroup_map[column] = subgroup

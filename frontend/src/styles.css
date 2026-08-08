@@ -259,6 +259,77 @@ body {
   margin: 0;
 }
 
+/* Exploitability badge (nouveau style pour ExploitabilityBadge) */
+.exploitability {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.exploitability.is-green { border-color: var(--safe); }
+.exploitability.is-orange { border-color: var(--amber); }
+.exploitability.is-red { border-color: var(--risk); }
+.exploitability__level {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.exploitability.is-green .exploitability__level { color: var(--safe); }
+.exploitability.is-orange .exploitability__level { color: var(--amber); }
+.exploitability.is-red .exploitability__level { color: var(--risk); }
+.exploitability__score {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+.exploitability__summary {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Badge severity */
+.badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+.badge.is-high { background: rgba(226, 87, 76, 0.15); color: var(--risk); }
+.badge.is-medium { background: rgba(242, 169, 59, 0.15); color: var(--amber); }
+.badge.is-low { background: rgba(79, 209, 165, 0.15); color: var(--safe); }
+
+/* Warnings structurés */
+.report__warning.is-high { border-left-color: var(--risk); }
+.report__warning.is-medium { border-left-color: var(--amber); }
+.report__warning.is-low { border-left-color: var(--safe); }
+.report__warning-code {
+  display: inline-block;
+  font-size: 10.5px;
+  color: var(--muted);
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: 8px;
+}
+.report__warning-reco {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: var(--text);
+  font-style: italic;
+}
+.report__disclaimer.is-warning {
+  color: var(--amber);
+}
+
 .report__warnings { display: flex; flex-direction: column; gap: 8px; }
 .report__warning {
   font-size: 13px;
