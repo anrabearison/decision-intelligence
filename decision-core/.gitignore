@@ -1,0 +1,16 @@
+# Artefacts de test et couverture
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# Artefacts Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Artefacts d'investigation (ne pas commiter)
+scratch/
